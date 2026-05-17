@@ -1,0 +1,18 @@
+# Core LLM and Framework
+langchain
+langchain-community
+langchain-core
+langchain-openai
+
+# Alibaba Tongyi Qwen
+dashscope
+
+# LangGraph (Agent State Management)
+langgraph
+langgraph-checkpoint
+langgraph-checkpoint-sqlite
+
+# Utilities
+pydantic
+typing-extensions
+sqlite3-binary  # Optional, but useful for sqlite tools
