@@ -72,3 +72,24 @@ async def get_agent_response(query: str, thread_id: str = "default_user"):
             response_content = last_msg.content
             
     return response_content
+
+async def get_agent_streaming_response(query: str, thread_id: str = "default_user"):
+    """
+    流式获取 Agent 响应
+    """
+    global _agent
+    if _agent is None:
+        _agent = create_survey_agent()
+    
+    config = {"configurable": {"thread_id": thread_id}}
+    input_data = {"messages": [HumanMessage(content=query)]}
+    
+    # 使用 astream_events 获取更细粒度的流式事件
+    async for event in _agent.astream_events(input_data, config, version="v2"):
+        kind = event["event"]
+        
+        # 捕获聊天模型输出的 token
+        if kind == "on_chat_model_stream":
+            content = event["data"]["chunk"].content
+            if content:
+                yield content

@@ -860,43 +860,98 @@
             if (!query) return;
 
             const isAgentMode = document.getElementById('agentModeToggle').checked;
-            const endpoint = isAgentMode ? '/api/chat-agent' : '/api/analyze';
+            // 标准模式使用 /api/analyze, Agent 模式使用流式 /api/chat-agent/stream
+            const endpoint = isAgentMode ? '/api/chat-agent/stream' : '/api/analyze';
 
             queryInput.value = '';
             queryInput.style.height = 'auto';
             sendBtn.disabled = true;
 
             addMessage(query, true);
-            addMessage('**[ 模式: ' + (isAgentMode ? 'AI Agent' : '标准分析') + ' ]**', false);
-            addTypingIndicator();
+            addMessage('**[ 模式: ' + (isAgentMode ? 'AI Agent (Streaming)' : '标准分析') + ' ]**', false);
+            
+            if (!isAgentMode) {
+                // 标准分析模式 (JSON 阻塞式)
+                addTypingIndicator();
+                try {
+                    const response = await fetch(endpoint, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ query })
+                    });
+                    const data = await response.json();
+                    removeTypingIndicator();
 
-            try {
-                const response = await fetch(endpoint, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ query, thread_id: 'user_session_001' })
-                });
-                const data = await response.json();
-                removeTypingIndicator();
+                    if (data.error) {
+                        addMessage('错误: ' + data.error, false);
+                    } else {
+                        let content = markdownToHtml(data.result || '未获取到分析结果');
 
-                if (data.error) {
-                    addMessage('错误: ' + data.error, false);
-                } else {
-                    let content = markdownToHtml(data.result || '未获取到分析结果');
+                        // Add charts
+                        if (data.charts && data.charts.length > 0) {
+                            data.charts.forEach(chartSrc => {
+                                content += `<div class="chart-container"><img src="${chartSrc}" alt="图表" onclick="window.open(this.src)"></div>`;
+                            });
+                        }
 
-                    // Add charts
-                    if (data.charts && data.charts.length > 0) {
-                        data.charts.forEach(chartSrc => {
-                            content += `<div class="chart-container"><img src="${chartSrc}" alt="图表" onclick="window.open(this.src)"></div>`;
-                        });
+                        addMessage(content, false);
                     }
-
-                    addMessage(content, false);
+                } catch (error) {
+                    removeTypingIndicator();
+                    addMessage('抱歉，分析过程中出现错误，请稍后重试。', false);
+                    console.error(error);
                 }
-            } catch (error) {
-                removeTypingIndicator();
-                addMessage('抱歉，分析过程中出现错误，请稍后重试。', false);
-                console.error(error);
+            } else {
+                // AI Agent 模式 (SSE 流式)
+                const aiMsgDiv = addMessage('', false);
+                const bubble = aiMsgDiv.querySelector('.bubble');
+                addTypingIndicator();
+
+                try {
+                    const response = await fetch(endpoint, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ query, thread_id: 'user_session_001' })
+                    });
+
+                    removeTypingIndicator();
+                    
+                    const reader = response.body.getReader();
+                    const decoder = new TextDecoder();
+                    let fullContent = "";
+
+                    while (true) {
+                        const { done, value } = await reader.read();
+                        if (done) break;
+
+                        const chunk = decoder.decode(value);
+                        const lines = chunk.split('\n');
+                        
+                        for (const line of lines) {
+                            if (line.startsWith('data: ')) {
+                                try {
+                                    const data = JSON.parse(line.substring(6));
+                                    if (data.error) {
+                                        bubble.innerHTML = `<span style="color:red">错误: ${data.error}</span>`;
+                                        break;
+                                    }
+                                    if (data.content) {
+                                        fullContent += data.content;
+                                        // 实时渲染 Markdown
+                                        bubble.innerHTML = markdownToHtml(fullContent);
+                                        chatMessages.scrollTop = chatMessages.scrollHeight;
+                                    }
+                                } catch (e) {
+                                    console.error("解析流数据出错", e);
+                                }
+                            }
+                        }
+                    }
+                } catch (error) {
+                    removeTypingIndicator();
+                    bubble.innerHTML = '<span style="color:red">连接 Agent 出错，请重试。</span>';
+                    console.error(error);
+                }
             }
 
             sendBtn.disabled = false;

@@ -9,7 +9,7 @@ import matplotlib.pyplot as plt
 import matplotlib.font_manager as fm
 import numpy as np
 
-from agent import get_agent_response
+from agent import get_agent_response, get_agent_streaming_response
 
 # 自动检测static目录
 static_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'static')
@@ -20,10 +20,11 @@ CORS(app)
 
 # agent mode
 import asyncio
+from flask import Response, stream_with_context
 
 @app.route('/api/chat-agent', methods=['POST'])
 def chat_agent():
-    """LangGraph Agent 问答接口"""
+    """LangGraph Agent 问答接口 (阻塞式)"""
     query = request.json.get('query', '')
     thread_id = request.json.get('thread_id', 'user_default')
     
@@ -36,6 +37,35 @@ def chat_agent():
         return jsonify({'result': response, 'charts': []})
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+
+@app.route('/api/chat-agent/stream', methods=['POST'])
+def chat_agent_stream():
+    """LangGraph Agent 问答接口 (流式 SSE)"""
+    query = request.json.get('query', '')
+    thread_id = request.json.get('thread_id', 'user_default')
+    
+    if not query.strip():
+        return jsonify({'error': '请输入问题'}), 400
+
+    def generate():
+        # 在同步环境中运行异步生成器的桥接逻辑
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        gen = get_agent_streaming_response(query, thread_id)
+        try:
+            while True:
+                try:
+                    chunk = loop.run_until_complete(gen.__anext__())
+                    yield f"data: {json.dumps({'content': chunk})}\n\n"
+                except StopAsyncIteration:
+                    break
+                except Exception as e:
+                    yield f"data: {json.dumps({'error': str(e)})}\n\n"
+                    break
+        finally:
+            loop.close()
+
+    return Response(stream_with_context(generate()), mimetype='text/event-stream')
 
 # Load font for Chinese
 plt.rcParams['font.sans-serif'] = ['Microsoft YaHei', 'SimHei', 'WenQuanYi Micro Hei', 'Noto Sans CJK SC', 'DejaVu Sans']
