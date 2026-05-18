@@ -1,17 +1,14 @@
-# Core LLM and Framework
+Flask[async]
+Flask-Cors
+pandas
+matplotlib
+numpy
 langchain
 langchain-community
 langchain-core
 langchain-openai
-
-# Alibaba Tongyi Qwen
-dashscope
-
-# LangGraph (Agent State Management)
 langgraph
 langgraph-checkpoint
 langgraph-checkpoint-sqlite
-
-# Utilities
 pydantic
 typing-extensions

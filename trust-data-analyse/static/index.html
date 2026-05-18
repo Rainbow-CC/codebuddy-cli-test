@@ -1,0 +1,1546 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>信托行业科技建设数据分析智能体</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        :root {
+            --primary: #1a73e8;
+            --primary-light: #e8f0fe;
+            --bg: #f0f2f5;
+            --card-bg: #ffffff;
+            --text: #202124;
+            --text-secondary: #5f6368;
+            --border: #dadce0;
+            --shadow: 0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.08);
+            --shadow-lg: 0 4px 12px rgba(0,0,0,0.15);
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        .header {
+            background: linear-gradient(135deg, #1a237e 0%, #283593 50%, #1565c0 100%);
+            color: white;
+            padding: 16px 24px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            box-shadow: var(--shadow-lg);
+            z-index: 10;
+        }
+        .header-icon {
+            width: 40px; height: 40px;
+            background: rgba(255,255,255,0.2);
+            border-radius: 10px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 22px;
+        }
+        .header h1 { font-size: 18px; font-weight: 600; }
+        .header .subtitle { font-size: 12px; opacity: 0.85; margin-top: 2px; }
+        .header .home-btn {
+            margin-left: auto;
+            padding: 8px 16px;
+            background: rgba(255,255,255,0.2);
+            color: white;
+            border: 1px solid rgba(255,255,255,0.3);
+            border-radius: 8px;
+            font-size: 13px;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-decoration: none;
+        }
+        .header .home-btn:hover {
+            background: rgba(255,255,255,0.3);
+        }
+        .main {
+            flex: 1;
+            display: flex;
+            overflow: hidden;
+            max-width: 1400px;
+            width: 100%;
+            margin: 0 auto;
+            padding: 16px;
+            gap: 16px;
+        }
+        .sidebar {
+            width: 280px;
+            flex-shrink: 0;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        .sidebar-card {
+            background: var(--card-bg);
+            border-radius: 12px;
+            padding: 16px;
+            box-shadow: var(--shadow);
+        }
+        .sidebar-card h3 {
+            font-size: 14px;
+            color: var(--text-secondary);
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .suggestion-item {
+            padding: 8px 12px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 13px;
+            color: var(--text);
+            transition: all 0.2s;
+            margin-bottom: 4px;
+            line-height: 1.4;
+        }
+        .suggestion-item:hover {
+            background: var(--primary-light);
+            color: var(--primary);
+        }
+        .suggestion-item .icon { margin-right: 6px; }
+        .chat-area {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background: var(--card-bg);
+            border-radius: 12px;
+            box-shadow: var(--shadow);
+            overflow: hidden;
+        }
+        .chat-messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+            scroll-behavior: smooth;
+        }
+        .chat-messages::-webkit-scrollbar { width: 6px; }
+        .chat-messages::-webkit-scrollbar-thumb { background: #c1c1c1; border-radius: 3px; }
+        .welcome {
+            text-align: center;
+            padding: 30px 20px 40px;
+            color: var(--text-secondary);
+        }
+        .welcome .logo { font-size: 42px; margin-bottom: 12px; }
+        .welcome h2 { font-size: 20px; color: var(--text); margin-bottom: 6px; }
+        .welcome p { font-size: 13px; line-height: 1.6; max-width: 600px; margin: 0 auto; }
+        .welcome-chips {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            justify-content: center;
+            margin-top: 20px;
+        }
+        .welcome-chip {
+            padding: 7px 14px;
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            font-size: 12px;
+            cursor: pointer;
+            transition: all 0.2s;
+            color: var(--text-secondary);
+        }
+        .welcome-chip:hover {
+            border-color: var(--primary);
+            color: var(--primary);
+            background: var(--primary-light);
+        }
+        .catalog-section {
+            max-width: 720px;
+            margin: 0 auto;
+            padding: 0 20px 30px;
+        }
+        .catalog-title {
+            font-size: 15px;
+            font-weight: 600;
+            color: var(--text);
+            margin: 20px 0 12px;
+            text-align: left;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .catalog-title::before {
+            content: '';
+            display: inline-block;
+            width: 3px;
+            height: 16px;
+            background: var(--primary);
+            border-radius: 2px;
+        }
+        .catalog-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+            gap: 10px;
+        }
+        .catalog-card {
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 14px 16px;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-align: left;
+        }
+        .catalog-card:hover {
+            border-color: var(--primary);
+            box-shadow: 0 2px 8px rgba(26,115,232,0.12);
+            transform: translateY(-1px);
+        }
+        .catalog-card .card-icon {
+            font-size: 22px;
+            margin-bottom: 6px;
+        }
+        .catalog-card .card-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text);
+            margin-bottom: 4px;
+        }
+        .catalog-card .card-desc {
+            font-size: 11px;
+            color: var(--text-secondary);
+            line-height: 1.5;
+        }
+        .catalog-card .card-questions {
+            margin-top: 8px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 4px;
+        }
+        .catalog-card .card-q {
+            font-size: 10px;
+            padding: 2px 8px;
+            background: #f0f4ff;
+            color: var(--primary);
+            border-radius: 10px;
+            white-space: nowrap;
+        }
+        .message {
+            margin-bottom: 20px;
+            animation: fadeIn 0.3s ease;
+        }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .message-user {
+            display: flex;
+            justify-content: flex-end;
+        }
+        .message-user .bubble {
+            background: var(--primary);
+            color: white;
+            padding: 10px 16px;
+            border-radius: 16px 16px 4px 16px;
+            max-width: 70%;
+            font-size: 14px;
+            line-height: 1.5;
+        }
+        .message-assistant {
+            display: flex;
+            justify-content: flex-start;
+            gap: 10px;
+        }
+        .message-assistant .avatar {
+            width: 32px; height: 32px;
+            background: linear-gradient(135deg, #1a237e, #1565c0);
+            border-radius: 8px;
+            display: flex; align-items: center; justify-content: center;
+            color: white; font-size: 16px;
+            flex-shrink: 0;
+        }
+        .message-assistant .bubble {
+            background: #f8f9fa;
+            padding: 16px 20px;
+            border-radius: 4px 16px 16px 16px;
+            max-width: 85%;
+            font-size: 14px;
+            line-height: 1.7;
+        }
+        .bubble h2 {
+            font-size: 16px;
+            margin-bottom: 12px;
+            color: var(--text);
+        }
+        .bubble h3 {
+            font-size: 14px;
+            margin: 12px 0 8px;
+            color: var(--text);
+        }
+        .bubble ul, .bubble ol {
+            padding-left: 20px;
+            margin: 6px 0;
+        }
+        .bubble li { margin-bottom: 4px; }
+        .bubble strong { color: #1a237e; }
+        .bubble table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 10px 0;
+            font-size: 13px;
+        }
+        .bubble th {
+            background: #e8f0fe;
+            padding: 8px 12px;
+            text-align: left;
+            font-weight: 600;
+            border: 1px solid #dee2e6;
+        }
+        .bubble td {
+            padding: 6px 12px;
+            border: 1px solid #dee2e6;
+        }
+        .bubble tr:nth-child(even) { background: #f8f9fa; }
+        .bubble p { margin: 6px 0; }
+        .bubble code {
+            background: #e8eaed;
+            padding: 1px 4px;
+            border-radius: 3px;
+            font-size: 13px;
+        }
+        .chart-container {
+            margin: 12px 0;
+            text-align: center;
+        }
+        .chart-container img {
+            max-width: 100%;
+            border-radius: 8px;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.1);
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+        .chart-container img:hover { transform: scale(1.02); }
+        .typing-indicator {
+            display: flex;
+            gap: 4px;
+            padding: 12px 16px;
+        }
+        .typing-indicator span {
+            width: 8px; height: 8px;
+            background: #9aa0a6;
+            border-radius: 50%;
+            animation: typing 1.4s infinite;
+        }
+        .typing-indicator span:nth-child(2) { animation-delay: 0.2s; }
+        .typing-indicator span:nth-child(3) { animation-delay: 0.4s; }
+        @keyframes typing { 0%, 60%, 100% { transform: translateY(0); } 30% { transform: translateY(-6px); } }
+        .input-area {
+            padding: 16px 20px;
+            border-top: 1px solid var(--border);
+            display: flex;
+            gap: 10px;
+            align-items: flex-end;
+        }
+        .input-wrapper {
+            flex: 1;
+            position: relative;
+        }
+        .input-wrapper textarea {
+            width: 100%;
+            padding: 10px 16px;
+            border: 2px solid var(--border);
+            border-radius: 12px;
+            font-size: 14px;
+            font-family: inherit;
+            resize: none;
+            outline: none;
+            transition: border-color 0.2s;
+            max-height: 120px;
+            line-height: 1.5;
+        }
+        .input-wrapper textarea:focus { border-color: var(--primary); }
+        .input-wrapper textarea::placeholder { color: #9aa0a6; }
+        .send-btn {
+            width: 42px; height: 42px;
+            background: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 18px;
+            transition: all 0.2s;
+            flex-shrink: 0;
+        }
+        .send-btn:hover { background: #1557b0; transform: scale(1.05); }
+        .send-btn:disabled { background: #9aa0a6; cursor: not-allowed; transform: none; }
+        .stats-bar {
+            display: flex;
+            gap: 16px;
+            flex-wrap: wrap;
+        }
+        .stat-item {
+            text-align: center;
+            flex: 1;
+            min-width: 80px;
+        }
+        .stat-value {
+            font-size: 24px;
+            font-weight: 700;
+            color: var(--primary);
+        }
+        .stat-label {
+            font-size: 11px;
+            color: var(--text-secondary);
+            margin-top: 2px;
+        }
+        .category-list {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+        .category-item {
+            padding: 6px 10px;
+            border-radius: 6px;
+            font-size: 12px;
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .category-item:hover {
+            background: var(--primary-light);
+            color: var(--primary);
+        }
+        .category-item .dot {
+            display: inline-block;
+            width: 6px; height: 6px;
+            border-radius: 50%;
+            margin-right: 6px;
+        }
+        @media (max-width: 900px) {
+            .sidebar { display: none; }
+            .main { padding: 8px; }
+        }
+
+        /* Toggle Switch Styles */
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 40px;
+            height: 20px;
+            flex-shrink: 0;
+            margin-bottom: 4px;
+        }
+        .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #ccc;
+            transition: .4s;
+            border-radius: 20px;
+        }
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 16px;
+            width: 16px;
+            left: 2px;
+            bottom: 2px;
+            background-color: white;
+            transition: .4s;
+            border-radius: 50%;
+        }
+        .switch input:checked + .slider {
+            background-color: var(--primary);
+        }
+        .switch input:checked + .slider:before {
+            transform: translateX(20px);
+        }
+        .agent-toggle-wrapper {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            margin-right: 10px;
+            padding-bottom: 4px;
+        }
+        .agent-toggle-label {
+            font-size: 10px;
+            color: var(--text-secondary);
+            white-space: nowrap;
+            margin-bottom: 2px;
+            font-weight: 600;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="header-icon">📊</div>
+        <div>
+            <h1>信托行业科技建设数据分析智能体</h1>
+            <div class="subtitle">基于65家信托公司科技能力调研数据 · 智能问答分析</div>
+        </div>
+        <a href="/" class="home-btn" onclick="returnToHome(event)">🏠 返回首页</a>
+    </div>
+
+    <div class="main">
+        <div class="sidebar">
+            <div class="sidebar-card">
+                <h3>📋 数据概览</h3>
+                <div class="stats-bar">
+                    <div class="stat-item">
+                        <div class="stat-value">65</div>
+                        <div class="stat-label">信托公司</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value">256</div>
+                        <div class="stat-label">数据字段</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value">10</div>
+                        <div class="stat-label">调研维度</div>
+                    </div>
+                </div>
+            </div>
+            <div class="sidebar-card">
+                <h3>⚙️ 头部标杆设置</h3>
+                <p style="font-size:12px;color:var(--text-secondary);margin-bottom:10px;">自定义综合排名的头部标杆公司</p>
+                <button onclick="openHeadBenchmarkModal()" style="width:100%;padding:10px;background:var(--primary);color:white;border:none;border-radius:8px;cursor:pointer;font-size:13px;">
+                    🏆 配置头部标杆
+                </button>
+                <div id="currentHeadBenchmark" style="margin-top:10px;font-size:11px;color:var(--text-secondary);">
+                    当前：系统默认
+                </div>
+            </div>
+
+            <div class="sidebar-card">
+                <h3>📊 维度与权重设置</h3>
+                <p style="font-size:12px;color:var(--text-secondary);margin-bottom:10px;">自定义排名维度和权重</p>
+                <button onclick="openDimensionsModal()" style="width:100%;padding:10px;background:#28a745;color:white;border:none;border-radius:8px;cursor:pointer;font-size:13px;">
+                    ⚖️ 配置维度权重
+                </button>
+                <div id="currentDimensions" style="margin-top:10px;font-size:11px;color:var(--text-secondary);">
+                    当前：8维度默认权重
+                </div>
+            </div>
+
+            <div class="sidebar-card">
+                <h3>📋 原始数据查看</h3>
+                <p style="font-size:12px;color:var(--text-secondary);margin-bottom:10px;">查看所有分析依据的原始表格数据</p>
+                <button onclick="openRawDataModal()" style="width:100%;padding:10px;background:#6c757d;color:white;border:none;border-radius:8px;cursor:pointer;font-size:13px;">
+                    📊 查看原始数据
+                </button>
+            </div>
+
+            <div class="sidebar-card">
+                <h3>🔍 字段查询</h3>
+                <p style="font-size:12px;color:var(--text-secondary);margin-bottom:10px;">查询任意公司的任意指标</p>
+                <button onclick="openFieldQueryModal()" style="width:100%;padding:10px;background:#17a2b8;color:white;border:none;border-radius:8px;cursor:pointer;font-size:13px;">
+                    🔍 查询字段
+                </button>
+            </div>
+
+            <div class="sidebar-card">
+                <h3>🏷️ 分析维度</h3>
+                <div class="category-list">
+                    <div class="category-item" onclick="askQuestion('头部标杆分析')">
+                        <span class="dot" style="background:#d4af37"></span>头部标杆分析
+                    </div>
+                    <div class="category-item" onclick="askQuestion('行业整体科技建设情况概览')">
+                        <span class="dot" style="background:#1a73e8"></span>行业概览
+                    </div>
+                    <div class="category-item" onclick="askQuestion('科技投入分析')">
+                        <span class="dot" style="background:#e8710a"></span>科技投入
+                    </div>
+                    <div class="category-item" onclick="askQuestion('科技团队人员配置分析')">
+                        <span class="dot" style="background:#0d652d"></span>人员配置
+                    </div>
+                    <div class="category-item" onclick="askQuestion('人工智能应用情况')">
+                        <span class="dot" style="background:#c5221f"></span>高新技术
+                    </div>
+                    <div class="category-item" onclick="askQuestion('业务系统部署情况')">
+                        <span class="dot" style="background:#7627bb"></span>业务系统
+                    </div>
+                    <div class="category-item" onclick="askQuestion('信创转型进展')">
+                        <span class="dot" style="background:#0944b8"></span>信创转型
+                    </div>
+                    <div class="category-item" onclick="askQuestion('数据治理现状分析')">
+                        <span class="dot" style="background:#188038"></span>数据治理
+                    </div>
+                    <div class="category-item" onclick="askQuestion('组织架构与治理分析')">
+                        <span class="dot" style="background:#410e8c"></span>组织架构
+                    </div>
+                    <div class="category-item" onclick="askQuestion('数字化渠道覆盖情况')">
+                        <span class="dot" style="background:#d93025"></span>数字化渠道
+                    </div>
+                    <div class="category-item" onclick="askQuestion('基础设施架构模式分布')">
+                        <span class="dot" style="background:#00796b"></span>基础设施
+                    </div>
+                </div>
+            </div>
+            <div class="sidebar-card">
+                <h3>💡 快捷提问</h3>
+                <div id="suggestions"></div>
+            </div>
+        </div>
+
+        <div class="chat-area">
+            <div class="chat-messages" id="chatMessages">
+                <div class="welcome" id="welcome">
+                    <div class="logo">🤖</div>
+                    <h2>信托行业科技建设数据分析智能体</h2>
+                    <p>基于65家信托公司、256个数据字段的科技能力调研数据，支持多维度智能分析。点击下方卡片即可开始探索。</p>
+                    <div class="welcome-chips">
+                        <div class="welcome-chip" onclick="askQuestion('头部标杆分析')">🏆 头部标杆</div>
+                        <div class="welcome-chip" onclick="askQuestion('综合排名TOP10')">📊 综合排名</div>
+                        <div class="welcome-chip" onclick="askQuestion('行业整体科技建设情况概览')">📈 行业概览</div>
+                        <div class="welcome-chip" onclick="askQuestion('中信信托 vs 平安信托')">📋 公司对比</div>
+                    </div>
+                </div>
+
+                <div class="catalog-section" id="catalogSection">
+                    <div class="catalog-title">📋 调研板块总览（10大维度 · 点击卡片直接提问）</div>
+                    <div class="catalog-grid">
+                        <div class="catalog-card" onclick="askQuestion('行业整体科技建设情况概览')">
+                            <div class="card-icon">📊</div>
+                            <div class="card-title">行业概览</div>
+                            <div class="card-desc">科技投入趋势、人员占比、CIO设立等核心指标汇总</div>
+                            <div class="card-questions">
+                                <span class="card-q">行业概览</span>
+                                <span class="card-q">整体情况</span>
+                            </div>
+                        </div>
+                        <div class="catalog-card" onclick="askQuestion('科技投入分析')">
+                            <div class="card-icon">💰</div>
+                            <div class="card-title">科技战略定位</div>
+                            <div class="card-desc">金融科技战略、数字化转型战略、数据治理战略等6项规划发布情况</div>
+                            <div class="card-questions">
+                                <span class="card-q">战略规划</span>
+                                <span class="card-q">数字化转型</span>
+                            </div>
+                        </div>
+                        <div class="catalog-card" onclick="askQuestion('科技投入分析')">
+                            <div class="card-icon">💵</div>
+                            <div class="card-title">资源投入与配置</div>
+                            <div class="card-desc">2023-2026年科技投入、人员配置、科技团队/外包团队规模</div>
+                            <div class="card-questions">
+                                <span class="card-q">投入排名</span>
+                                <span class="card-q">人员配置</span>
+                                <span class="card-q">外包团队</span>
+                            </div>
+                        </div>
+                        <div class="catalog-card" onclick="askQuestion('组织架构与治理分析')">
+                            <div class="card-icon">🏢</div>
+                            <div class="card-title">组织架构与人才培养</div>
+                            <div class="card-desc">治理机构设立、科技部门设置、CIO配置、认证资质、人才流动</div>
+                            <div class="card-questions">
+                                <span class="card-q">组织架构</span>
+                                <span class="card-q">CIO设立</span>
+                                <span class="card-q">认证资质</span>
+                            </div>
+                        </div>
+                        <div class="catalog-card" onclick="askQuestion('基础设施架构模式分布')">
+                            <div class="card-icon">🏗️</div>
+                            <div class="card-title">基础设施架构</div>
+                            <div class="card-desc">机房架构模式、服务器虚拟化、桌面虚拟化、公有云平台使用</div>
+                            <div class="card-questions">
+                                <span class="card-q">基础设施</span>
+                                <span class="card-q">公有云</span>
+                                <span class="card-q">虚拟化</span>
+                            </div>
+                        </div>
+                        <div class="catalog-card" onclick="askQuestion('信创转型进展')">
+                            <div class="card-icon">🖥️</div>
+                            <div class="card-title">信创转型与进展</div>
+                            <div class="card-desc">信创进展阶段、信创系统占比、芯片/服务器/操作系统/数据库/中间件品牌选择</div>
+                            <div class="card-questions">
+                                <span class="card-q">信创进展</span>
+                                <span class="card-q">品牌选择</span>
+                            </div>
+                        </div>
+                        <div class="catalog-card" onclick="askQuestion('人工智能应用情况')">
+                            <div class="card-icon">🤖</div>
+                            <div class="card-title">高新技术应用</div>
+                            <div class="card-desc">人工智能、大数据、云原生、区块链四大技术的应用场景与阶段</div>
+                            <div class="card-questions">
+                                <span class="card-q">AI应用</span>
+                                <span class="card-q">大数据</span>
+                                <span class="card-q">云原生</span>
+                                <span class="card-q">区块链</span>
+                            </div>
+                        </div>
+                        <div class="catalog-card" onclick="askQuestion('业务系统部署情况')">
+                            <div class="card-icon">💻</div>
+                            <div class="card-title">业务应用系统建设</div>
+                            <div class="card-desc">27类业务系统部署覆盖率、自研/合作/外采比例、未来3-5年投入方向</div>
+                            <div class="card-questions">
+                                <span class="card-q">系统部署</span>
+                                <span class="card-q">未来方向</span>
+                            </div>
+                        </div>
+                        <div class="catalog-card" onclick="askQuestion('数字化渠道覆盖情况')">
+                            <div class="card-icon">📱</div>
+                            <div class="card-title">数字化客户服务渠道</div>
+                            <div class="card-desc">APP/小程序/网站等渠道覆盖、远程面签/智能客服/电子合同等功能</div>
+                            <div class="card-questions">
+                                <span class="card-q">渠道覆盖</span>
+                                <span class="card-q">APP</span>
+                                <span class="card-q">智能客服</span>
+                            </div>
+                        </div>
+                        <div class="catalog-card" onclick="askQuestion('数据治理现状分析')">
+                            <div class="card-icon">🗄️</div>
+                            <div class="card-title">数据治理与安全</div>
+                            <div class="card-desc">数据中台建设、数据质量管理、分类分级、数据安全/DLP管控</div>
+                            <div class="card-questions">
+                                <span class="card-q">数据治理</span>
+                                <span class="card-q">数据安全</span>
+                                <span class="card-q">数据中台</span>
+                            </div>
+                        </div>
+                        <div class="catalog-card" onclick="askQuestion('综合排名TOP10')">
+                            <div class="card-icon">📊</div>
+                            <div class="card-title">综合实力排名</div>
+                            <div class="card-desc">八大评价维度（战略定位为参考维度不参与排名，其余七维度：资源20%+组织15%+设施10%+信创10%+技术15%+系统10%+数安10%）</div>
+                            <div class="card-questions">
+                                <span class="card-q">综合排名</span>
+                                <span class="card-q">八大维度</span>
+                            </div>
+                        </div>
+                        <div class="catalog-card" onclick="askQuestion('头部标杆分析')">
+                            <div class="card-icon">🏆</div>
+                            <div class="card-title">头部标杆分析</div>
+                            <div class="card-desc">10家头部公司高端水平对标：中信/平安/华润/建信/交银/华能/上海/中诚/外贸/紫金</div>
+                            <div class="card-questions">
+                                <span class="card-q">头部标杆</span>
+                                <span class="card-q">高端对标</span>
+                                <span class="card-q">头部排名</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="input-area">
+                <div class="agent-toggle-wrapper">
+                    <div class="agent-toggle-label">🤖 AI Agent</div>
+                    <label class="switch">
+                        <input type="checkbox" id="agentModeToggle">
+                        <span class="slider"></span>
+                    </label>
+                </div>
+                <div class="input-wrapper">
+                    <textarea id="queryInput" rows="1" placeholder="输入您的问题，例如：科技投入排名TOP10、人工智能应用情况..." 
+                              onkeydown="handleKeyDown(event)"></textarea>
+                </div>
+                <button class="send-btn" id="sendBtn" onclick="sendMessage()">➤</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const chatMessages = document.getElementById('chatMessages');
+        const queryInput = document.getElementById('queryInput');
+        const sendBtn = document.getElementById('sendBtn');
+        const welcome = document.getElementById('welcome');
+
+        // Auto-resize textarea
+        queryInput.addEventListener('input', function() {
+            this.style.height = 'auto';
+            this.style.height = Math.min(this.scrollHeight, 120) + 'px';
+        });
+
+        function handleKeyDown(e) {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                sendMessage();
+            }
+        }
+
+        function returnToHome(e) {
+            e.preventDefault();
+            // Clear chat messages and show welcome + catalog
+            chatMessages.innerHTML = '';
+            if (welcome) welcome.style.display = 'block';
+            const catalogSection = document.getElementById('catalogSection');
+            if (catalogSection) {
+                catalogSection.style.display = 'block';
+            } else {
+                // Reload page to get fresh HTML
+                location.reload();
+            }
+            return false;
+        }
+
+        function askQuestion(text) {
+            queryInput.value = text;
+            sendMessage();
+        }
+
+        function addMessage(content, isUser) {
+            if (welcome) welcome.style.display = 'none';
+            const catalogSection = document.getElementById('catalogSection');
+            if (catalogSection) catalogSection.style.display = 'none';
+            const div = document.createElement('div');
+            div.className = `message ${isUser ? 'message-user' : 'message-assistant'}`;
+            if (isUser) {
+                div.innerHTML = `<div class="bubble">${escapeHtml(content)}</div>`;
+            } else {
+                div.innerHTML = `
+                    <div class="avatar">🤖</div>
+                    <div class="bubble">${content}</div>
+                `;
+            }
+            chatMessages.appendChild(div);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+            return div;
+        }
+
+        function addTypingIndicator() {
+            const div = document.createElement('div');
+            div.className = 'message message-assistant';
+            div.id = 'typing';
+            div.innerHTML = `
+                <div class="avatar">🤖</div>
+                <div class="bubble">
+                    <div class="typing-indicator">
+                        <span></span><span></span><span></span>
+                    </div>
+                </div>
+            `;
+            chatMessages.appendChild(div);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+
+        function removeTypingIndicator() {
+            const el = document.getElementById('typing');
+            if (el) el.remove();
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        function markdownToHtml(text) {
+            let html = text;
+            // Tables
+            html = html.replace(/\n\|(.+)\|\n\|[-| :]+\|\n((?:\|.+\|\n?)+)/g, (match, header, body) => {
+                const headers = header.split('|').filter(h => h.trim());
+                const rows = body.trim().split('\n').map(row => row.split('|').filter(c => c.trim()));
+                let table = '<table><thead><tr>';
+                headers.forEach(h => table += `<th>${h.trim()}</th>`);
+                table += '</tr></thead><tbody>';
+                rows.forEach(row => {
+                    table += '<tr>';
+                    row.forEach(cell => table += `<td>${cell.trim()}</td>`);
+                    table += '</tr>';
+                });
+                table += '</tbody></table>';
+                return table;
+            });
+            // Headers
+            html = html.replace(/^### (.+)$/gm, '<h3>$1</h3>');
+            html = html.replace(/^## (.+)$/gm, '<h2>$1</h2>');
+            // Bold
+            html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+            // Lists
+            html = html.replace(/^- (.+)$/gm, '<li>$1</li>');
+            html = html.replace(/(<li>.*<\/li>\n?)+/g, '<ul>$&</ul>');
+            // Line breaks
+            html = html.replace(/\n\n/g, '<br><br>');
+            html = html.replace(/\n/g, '<br>');
+            return html;
+        }
+
+        async function sendMessage() {
+            const query = queryInput.value.trim();
+            if (!query) return;
+
+            const isAgentMode = document.getElementById('agentModeToggle').checked;
+            const endpoint = isAgentMode ? '/api/chat-agent' : '/api/analyze';
+
+            queryInput.value = '';
+            queryInput.style.height = 'auto';
+            sendBtn.disabled = true;
+
+            addMessage(query, true);
+            addMessage('**[ 模式: ' + (isAgentMode ? 'AI Agent' : '标准分析') + ' ]**', false);
+            addTypingIndicator();
+
+            try {
+                const response = await fetch(endpoint, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ query, thread_id: 'user_session_001' })
+                });
+                const data = await response.json();
+                removeTypingIndicator();
+
+                if (data.error) {
+                    addMessage('错误: ' + data.error, false);
+                } else {
+                    let content = markdownToHtml(data.result || '未获取到分析结果');
+
+                    // Add charts
+                    if (data.charts && data.charts.length > 0) {
+                        data.charts.forEach(chartSrc => {
+                            content += `<div class="chart-container"><img src="${chartSrc}" alt="图表" onclick="window.open(this.src)"></div>`;
+                        });
+                    }
+
+                    addMessage(content, false);
+                }
+            } catch (error) {
+                removeTypingIndicator();
+                addMessage('抱歉，分析过程中出现错误，请稍后重试。', false);
+                console.error(error);
+            }
+
+            sendBtn.disabled = false;
+            queryInput.focus();
+        }
+
+        // Load suggestions
+        fetch('/api/suggestions')
+            .then(r => r.json())
+            .then(data => {
+                const container = document.getElementById('suggestions');
+                const suggestions = data.suggestions.slice(0, 8);
+                container.innerHTML = suggestions.map(s =>
+                    `<div class="suggestion-item" onclick="askQuestion('${s}')">💬 ${s}</div>`
+                ).join('');
+            })
+            .catch(() => {});
+
+        // ============ 头部标杆配置功能 ============
+        let allCompanies = [];
+        let currentHeadBenchmark = [];
+
+        // 加载头部标杆配置
+        function loadHeadBenchmark() {
+            fetch('/api/head-benchmark')
+                .then(r => r.json())
+                .then(data => {
+                    allCompanies = data.all_companies || [];
+                    currentHeadBenchmark = (data.companies || []).map(c => c.name);
+                    const isUserDefined = data.is_user_defined;
+                    
+                    // 更新侧边栏显示
+                    const statusEl = document.getElementById('currentHeadBenchmark');
+                    if (statusEl) {
+                        if (isUserDefined) {
+                            statusEl.innerHTML = `当前：<b>用户自定义</b> (${currentHeadBenchmark.length}家)`;
+                        } else {
+                            statusEl.innerHTML = `当前：<b>系统默认</b> (${currentHeadBenchmark.length}家)`;
+                        }
+                    }
+                })
+                .catch(() => {});
+        }
+
+        // 打开配置弹窗
+        function openHeadBenchmarkModal() {
+            const modal = document.getElementById('headBenchmarkModal');
+            const list = document.getElementById('headBenchmarkList');
+            
+            if (!allCompanies.length) {
+                alert('正在加载公司列表...');
+                loadHeadBenchmark();
+                return;
+            }
+            
+            list.innerHTML = allCompanies.map(c => `
+                <label style="display:flex;align-items:center;padding:8px;cursor:pointer;border-radius:6px;transition:background 0.2s;" onmouseover="this.style.background='#f5f5f5'" onmouseout="this.style.background='transparent'">
+                    <input type="checkbox" value="${c.name}" ${currentHeadBenchmark.includes(c.name) ? 'checked' : ''} 
+                        style="margin-right:10px;width:18px;height:18px;cursor:pointer;">
+                    <span style="font-size:14px;">${c.display_name || c.name}</span>
+                </label>
+            `).join('');
+            
+            modal.style.display = 'flex';
+        }
+
+        // 关闭弹窗
+        function closeHeadBenchmarkModal() {
+            document.getElementById('headBenchmarkModal').style.display = 'none';
+        }
+
+        // 保存配置
+        function saveHeadBenchmark() {
+            const checkboxes = document.querySelectorAll('#headBenchmarkList input[type="checkbox"]:checked');
+            const selected = Array.from(checkboxes).map(cb => cb.value);
+            
+            if (selected.length === 0) {
+                alert('请至少选择一家公司作为头部标杆');
+                return;
+            }
+            
+            if (selected.length > 15) {
+                alert('头部标杆公司数量不能超过15家');
+                return;
+            }
+            
+            fetch('/api/head-benchmark', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({companies: selected})
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) {
+                    currentHeadBenchmark = selected;
+                    document.getElementById('currentHeadBenchmark').innerHTML = 
+                        `当前：<b>用户自定义</b> (${selected.length}家)`;
+                    closeHeadBenchmarkModal();
+                    alert('头部标杆配置已保存！综合排名将按新配置排序。');
+                } else {
+                    alert('保存失败：' + (data.error || '未知错误'));
+                }
+            })
+            .catch(() => alert('保存失败，请检查网络连接'));
+        }
+
+        // 重置为系统默认
+        function resetHeadBenchmark() {
+            if (!confirm('确定要重置为系统默认的头部标杆配置吗？')) return;
+            
+            fetch('/api/head-benchmark', {method: 'DELETE'})
+                .then(r => r.json())
+                .then(data => {
+                    if (data.success) {
+                        loadHeadBenchmark();
+                        closeHeadBenchmarkModal();
+                        alert('已重置为系统默认配置！');
+                    }
+                })
+                .catch(() => alert('重置失败'));
+        }
+
+        // 页面加载时获取当前配置
+        document.addEventListener('DOMContentLoaded', function() {
+            loadHeadBenchmark();
+            loadDimensions();
+        });
+
+        // ============ 维度与权重配置功能 ============
+        let currentDimensionsConfig = null;
+        const defaultDimensions = {
+            'd1_strategy': {'name': '科技战略定位', 'weight': 0.10, 'enabled': true, 'is_reference': true},
+            'd2_resource': {'name': '资源投入与配置', 'weight': 0.20, 'enabled': true, 'is_reference': false},
+            'd3_org': {'name': '组织架构与人才培养', 'weight': 0.15, 'enabled': true, 'is_reference': false},
+            'd4_infra': {'name': '基础设施架构', 'weight': 0.10, 'enabled': true, 'is_reference': false},
+            'd5_xc': {'name': '信创转型', 'weight': 0.10, 'enabled': true, 'is_reference': false},
+            'd6_tech': {'name': '高新技术应用', 'weight': 0.15, 'enabled': true, 'is_reference': false},
+            'd7_system': {'name': '业务应用系统建设', 'weight': 0.10, 'enabled': true, 'is_reference': false},
+            'd8_data': {'name': '数据治理与安全', 'weight': 0.10, 'enabled': true, 'is_reference': false},
+        };
+
+        // 加载维度配置
+        function loadDimensions() {
+            fetch('/api/dimensions')
+                .then(r => r.json())
+                .then(data => {
+                    currentDimensionsConfig = data.dimensions || defaultDimensions;
+                    const isUserDefined = data.is_user_defined;
+                    
+                    // 更新侧边栏显示
+                    const statusEl = document.getElementById('currentDimensions');
+                    if (statusEl) {
+                        const enabledCount = Object.values(currentDimensionsConfig).filter(d => d.enabled && !d.is_reference).length;
+                        if (isUserDefined) {
+                            statusEl.innerHTML = `当前：<b>用户自定义</b> (${enabledCount}个排名维度)`;
+                        } else {
+                            statusEl.innerHTML = `当前：<b>默认配置</b> (8维度)`;
+                        }
+                    }
+                })
+                .catch(() => {});
+        }
+
+        // 打开维度配置弹窗
+        function openDimensionsModal() {
+            const modal = document.getElementById('dimensionsModal');
+            const list = document.getElementById('dimensionsList');
+            
+            if (!currentDimensionsConfig) {
+                currentDimensionsConfig = JSON.parse(JSON.stringify(defaultDimensions));
+            }
+            
+            renderDimensionsList();
+            modal.style.display = 'flex';
+        }
+
+        // 渲染维度列表
+        function renderDimensionsList() {
+            const list = document.getElementById('dimensionsList');
+            const dimKeys = ['d1_strategy', 'd2_resource', 'd3_org', 'd4_infra', 'd5_xc', 'd6_tech', 'd7_system', 'd8_data'];
+            
+            let html = '';
+            let totalWeight = 0;
+            
+            dimKeys.forEach(key => {
+                const dim = currentDimensionsConfig[key];
+                const isReference = dim.is_reference;
+                totalWeight += (dim.enabled && !isReference) ? dim.weight : 0;
+                
+                html += `
+                    <div style="padding:15px;border:1px solid #e0e0e0;border-radius:8px;margin-bottom:10px;background:${isReference ? '#f8f9fa' : 'white'};">
+                        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+                            <label style="display:flex;align-items:center;cursor:pointer;">
+                                <input type="checkbox" ${dim.enabled ? 'checked' : ''} 
+                                    onchange="toggleDimension('${key}', this.checked)"
+                                    style="margin-right:10px;width:18px;height:18px;"
+                                    ${isReference ? '' : ''}>
+                                <span style="font-weight:600;font-size:15px;">${dim.name}</span>
+                                ${isReference ? '<span style="margin-left:8px;font-size:12px;color:#666;background:#e0e0e0;padding:2px 6px;border-radius:4px;">参考维度</span>' : ''}
+                            </label>
+                        </div>
+                        <div style="display:flex;align-items:center;gap:10px;">
+                            <span style="font-size:13px;color:#666;min-width:40px;">权重:</span>
+                            <input type="range" min="0" max="50" value="${Math.round(dim.weight * 100)}" 
+                                oninput="updateDimensionWeight('${key}', this.value)"
+                                style="flex:1;" ${!dim.enabled ? 'disabled' : ''}>
+                            <span style="font-size:14px;font-weight:600;min-width:50px;text-align:right;" id="weight-${key}">${Math.round(dim.weight * 100)}%</span>
+                        </div>
+                    </div>
+                `;
+            });
+            
+            list.innerHTML = html;
+            updateTotalWeight();
+        }
+
+        // 切换维度启用状态
+        function toggleDimension(key, enabled) {
+            currentDimensionsConfig[key].enabled = enabled;
+            renderDimensionsList();
+        }
+
+        // 更新维度权重
+        function updateDimensionWeight(key, value) {
+            currentDimensionsConfig[key].weight = parseInt(value) / 100;
+            document.getElementById(`weight-${key}`).textContent = value + '%';
+            updateTotalWeight();
+        }
+
+        // 更新总权重显示
+        function updateTotalWeight() {
+            let total = 0;
+            Object.values(currentDimensionsConfig).forEach(dim => {
+                if (dim.enabled && !dim.is_reference) {
+                    total += dim.weight;
+                }
+            });
+            
+            const totalEl = document.getElementById('totalWeight');
+            if (totalEl) {
+                totalEl.textContent = `排名维度权重总和: ${Math.round(total * 100)}%`;
+                totalEl.style.color = Math.abs(total - 1.0) < 0.001 ? '#28a745' : '#dc3545';
+            }
+        }
+
+        // 关闭维度配置弹窗
+        function closeDimensionsModal() {
+            document.getElementById('dimensionsModal').style.display = 'none';
+        }
+
+        // 保存维度配置
+        function saveDimensions() {
+            // 验证权重总和
+            let totalWeight = 0;
+            const enabledDims = Object.values(currentDimensionsConfig).filter(d => d.enabled && !d.is_reference);
+            enabledDims.forEach(d => totalWeight += d.weight);
+            
+            if (Math.abs(totalWeight - 1.0) > 0.001) {
+                alert(`排名维度权重总和必须等于100%，当前为${Math.round(totalWeight * 100)}%`);
+                return;
+            }
+            
+            if (enabledDims.length === 0) {
+                alert('至少需要启用一个非参考维度');
+                return;
+            }
+            
+            fetch('/api/dimensions', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({dimensions: currentDimensionsConfig})
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) {
+                    const enabledCount = Object.values(currentDimensionsConfig).filter(d => d.enabled && !d.is_reference).length;
+                    document.getElementById('currentDimensions').innerHTML = 
+                        `当前：<b>用户自定义</b> (${enabledCount}个排名维度)`;
+                    closeDimensionsModal();
+                    alert('维度权重配置已保存！综合排名将按新配置计算。');
+                } else {
+                    alert('保存失败：' + (data.error || '未知错误'));
+                }
+            })
+            .catch(() => alert('保存失败，请检查网络连接'));
+        }
+
+        // 重置维度配置
+        function resetDimensions() {
+            if (!confirm('确定要重置为默认维度配置吗？')) return;
+            
+            fetch('/api/dimensions', {method: 'DELETE'})
+                .then(r => r.json())
+                .then(data => {
+                    if (data.success) {
+                        currentDimensionsConfig = JSON.parse(JSON.stringify(defaultDimensions));
+                        loadDimensions();
+                        closeDimensionsModal();
+                        alert('已重置为默认维度配置！');
+                    }
+                })
+                .catch(() => alert('重置失败'));
+        }
+
+        // ============ 原始数据查看功能 ============
+        let rawDataCache = null;
+
+        // 打开原始数据查看弹窗
+        function openRawDataModal() {
+            const modal = document.getElementById('rawDataModal');
+            const content = document.getElementById('rawDataContent');
+            
+            content.innerHTML = '<div style="text-align:center;padding:40px;">📊 正在加载原始数据...</div>';
+            modal.style.display = 'flex';
+            
+            // 加载原始数据
+            fetch('/api/raw-data')
+                .then(r => r.json())
+                .then(data => {
+                    if (data.success) {
+                        rawDataCache = data;
+                        renderRawDataTable(data);
+                    } else {
+                        content.innerHTML = '<div style="color:red;padding:20px;">加载失败</div>';
+                    }
+                })
+                .catch(() => {
+                    content.innerHTML = '<div style="color:red;padding:20px;">网络错误，请重试</div>';
+                });
+        }
+
+        // 渲染原始数据表格
+        function renderRawDataTable(data) {
+            const content = document.getElementById('rawDataContent');
+            const searchTerm = document.getElementById('rawDataSearch')?.value?.toLowerCase() || '';
+            
+            // 过滤行
+            let rows = data.rows;
+            if (searchTerm) {
+                rows = rows.filter(row => 
+                    row.some(cell => String(cell).toLowerCase().includes(searchTerm))
+                );
+            }
+            
+            // 构建表格HTML
+            let html = `
+                <div style="margin-bottom:15px;padding:10px;background:#f8f9fa;border-radius:8px;">
+                    <b>数据概览：</b>共 ${data.total_companies} 家公司，${data.total_fields} 个字段
+                    <span style="margin-left:20px;color:#666;">显示 ${rows.length} 行</span>
+                </div>
+                <div style="overflow:auto;max-height:60vh;border:1px solid #e0e0e0;border-radius:8px;">
+                    <table style="width:100%;border-collapse:collapse;font-size:12px;">
+                        <thead style="position:sticky;top:0;background:#f5f5f5;z-index:10;">
+                            <tr>
+                                ${data.headers.map(h => `<th style="padding:10px 8px;border:1px solid #e0e0e0;text-align:left;font-weight:600;white-space:nowrap;min-width:80px;">${h}</th>`).join('')}
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${rows.map((row, idx) => `
+                                <tr style="background:${idx % 2 === 0 ? 'white' : '#fafafa'};">
+                                    ${row.map((cell, cellIdx) => `
+                                        <td style="padding:8px;border:1px solid #e0e0e0;${cellIdx <= 1 ? 'font-weight:600;background:#f0f8ff;' : ''}max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${cell}">
+                                            ${cell || '-'}
+                                        </td>
+                                    `).join('')}
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                </div>
+            `;
+            
+            content.innerHTML = html;
+        }
+
+        // 搜索原始数据
+        function searchRawData() {
+            if (rawDataCache) {
+                renderRawDataTable(rawDataCache);
+            }
+        }
+
+        // 关闭原始数据弹窗
+        function closeRawDataModal() {
+            document.getElementById('rawDataModal').style.display = 'none';
+            rawDataCache = null;
+        }
+
+        // 导出原始数据为CSV
+        function exportRawData() {
+            if (!rawDataCache) return;
+            
+            const csv = [
+                rawDataCache.headers.join(','),
+                ...rawDataCache.rows.map(row => row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(','))
+            ].join('\n');
+            
+            const blob = new Blob(['\ufeff' + csv], {type: 'text/csv;charset=utf-8;'});
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = '信托行业科技建设原始数据.csv';
+            link.click();
+        }
+
+        // ============ 字段查询功能 ============
+        let allFieldsCache = null;
+        let allCompaniesCache = null;
+
+        // 打开字段查询弹窗
+        function openFieldQueryModal() {
+            const modal = document.getElementById('fieldQueryModal');
+            modal.style.display = 'flex';
+            
+            // 加载公司和字段列表
+            loadCompaniesAndFields();
+        }
+
+        // 加载公司和字段列表
+        function loadCompaniesAndFields() {
+            // 加载字段列表
+            if (!allFieldsCache) {
+                fetch('/api/fields')
+                    .then(r => r.json())
+                    .then(data => {
+                        if (data.success) {
+                            allFieldsCache = data.fields;
+                            renderFieldSelect();
+                        }
+                    })
+                    .catch(() => {});
+            } else {
+                renderFieldSelect();
+            }
+            
+            // 加载公司列表
+            if (!allCompaniesCache) {
+                fetch('/api/head-benchmark')
+                    .then(r => r.json())
+                    .then(data => {
+                        allCompaniesCache = data.all_companies;
+                        renderCompanySelect();
+                    })
+                    .catch(() => {});
+            } else {
+                renderCompanySelect();
+            }
+        }
+
+        // 渲染公司选择下拉框
+        function renderCompanySelect() {
+            const select = document.getElementById('fieldQueryCompany');
+            select.innerHTML = '<option value="">请选择公司</option>' +
+                allCompaniesCache.map(c => `<option value="${c.name}">${c.display_name}</option>`).join('');
+        }
+
+        // 渲染字段选择下拉框
+        function renderFieldSelect() {
+            const select = document.getElementById('fieldQueryField');
+            const searchTerm = document.getElementById('fieldSearchInput')?.value?.toLowerCase() || '';
+            
+            let fields = allFieldsCache;
+            if (searchTerm) {
+                fields = fields.filter(f => f.name.toLowerCase().includes(searchTerm));
+            }
+            
+            select.innerHTML = '<option value="">请选择字段</option>' +
+                fields.slice(0, 100).map(f => `<option value="${f.name}">${f.name}</option>`).join('');
+        }
+
+        // 搜索字段
+        function searchFields() {
+            renderFieldSelect();
+        }
+
+        // 执行字段查询
+        function executeFieldQuery() {
+            const company = document.getElementById('fieldQueryCompany').value;
+            const field = document.getElementById('fieldQueryField').value;
+            
+            if (!company || !field) {
+                alert('请选择公司和字段');
+                return;
+            }
+            
+            const resultDiv = document.getElementById('fieldQueryResult');
+            resultDiv.innerHTML = '<div style="text-align:center;padding:20px;">查询中...</div>';
+            
+            fetch(`/api/company/field?company=${encodeURIComponent(company)}&field=${encodeURIComponent(field)}`)
+                .then(r => r.json())
+                .then(data => {
+                    if (data.success) {
+                        let html = `
+                            <div style="background:#f8f9fa;padding:15px;border-radius:8px;margin-bottom:15px;">
+                                <h4 style="margin:0 0 10px 0;">${data.company_name} - ${data.field_name}</h4>
+                                <div style="font-size:24px;font-weight:bold;color:var(--primary);">${data.value !== null ? data.value : '暂无数据'}</div>
+                            </div>
+                        `;
+                        
+                        if (data.industry_stats) {
+                            html += `
+                                <div style="background:#e8f4f8;padding:15px;border-radius:8px;">
+                                    <h5 style="margin:0 0 10px 0;">行业参考（共${data.industry_stats.count}家）</h5>
+                                    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;font-size:14px;">
+                                        <div>平均: <b>${data.industry_stats.avg?.toFixed(2) || '-'}</b></div>
+                                        <div>最高: <b>${data.industry_stats.max || '-'}</b></div>
+                                        <div>最低: <b>${data.industry_stats.min || '-'}</b></div>
+                                    </div>
+                                </div>
+                            `;
+                        }
+                        
+                        resultDiv.innerHTML = html;
+                    } else {
+                        resultDiv.innerHTML = `<div style="color:red;">查询失败: ${data.error}</div>`;
+                    }
+                })
+                .catch(() => {
+                    resultDiv.innerHTML = '<div style="color:red;">网络错误</div>';
+                });
+        }
+
+        // 关闭字段查询弹窗
+        function closeFieldQueryModal() {
+            document.getElementById('fieldQueryModal').style.display = 'none';
+            document.getElementById('fieldQueryResult').innerHTML = '';
+        }
+
+        // 发送查询到聊天
+        function sendQueryToChat() {
+            const company = document.getElementById('fieldQueryCompany').value;
+            const field = document.getElementById('fieldQueryField').value;
+            
+            if (company && field) {
+                askQuestion(`${company}${field}`);
+                closeFieldQueryModal();
+            }
+        }
+    </script>
+
+    <!-- 头部标杆配置弹窗 -->
+    <div id="headBenchmarkModal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:1000;align-items:center;justify-content:center;">
+        <div style="background:white;width:90%;max-width:500px;max-height:80vh;border-radius:12px;box-shadow:0 4px 20px rgba(0,0,0,0.3);display:flex;flex-direction:column;">
+            <div style="padding:20px;border-bottom:1px solid #e0e0e0;display:flex;justify-content:space-between;align-items:center;">
+                <h3 style="margin:0;font-size:18px;">🏆 配置头部标杆公司</h3>
+                <button onclick="closeHeadBenchmarkModal()" style="background:none;border:none;font-size:24px;cursor:pointer;color:#666;">&times;</button>
+            </div>
+            <div style="padding:15px 20px;background:#f8f9fa;font-size:13px;color:#666;">
+                选择作为综合排名优先排序的头部标杆公司（建议10家，最多15家）
+            </div>
+            <div id="headBenchmarkList" style="flex:1;overflow-y:auto;padding:15px 20px;display:grid;grid-template-columns:repeat(2,1fr);gap:5px;">
+                <!-- 公司列表将在这里动态生成 -->
+            </div>
+            <div style="padding:20px;border-top:1px solid #e0e0e0;display:flex;gap:10px;justify-content:flex-end;">
+                <button onclick="resetHeadBenchmark()" style="padding:10px 20px;background:#f5f5f5;color:#666;border:none;border-radius:6px;cursor:pointer;font-size:14px;">重置为默认</button>
+                <button onclick="closeHeadBenchmarkModal()" style="padding:10px 20px;background:#e0e0e0;color:#333;border:none;border-radius:6px;cursor:pointer;font-size:14px;">取消</button>
+                <button onclick="saveHeadBenchmark()" style="padding:10px 20px;background:var(--primary);color:white;border:none;border-radius:6px;cursor:pointer;font-size:14px;">保存配置</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 维度与权重配置弹窗 -->
+    <div id="dimensionsModal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:1000;align-items:center;justify-content:center;">
+        <div style="background:white;width:90%;max-width:500px;max-height:85vh;border-radius:12px;box-shadow:0 4px 20px rgba(0,0,0,0.3);display:flex;flex-direction:column;">
+            <div style="padding:20px;border-bottom:1px solid #e0e0e0;display:flex;justify-content:space-between;align-items:center;">
+                <h3 style="margin:0;font-size:18px;">⚖️ 配置维度与权重</h3>
+                <button onclick="closeDimensionsModal()" style="background:none;border:none;font-size:24px;cursor:pointer;color:#666;">&times;</button>
+            </div>
+            <div style="padding:15px 20px;background:#f8f9fa;font-size:13px;color:#666;">
+                勾选要纳入排名的维度，调整权重（参考维度仅展示不计入排名）
+                <div id="totalWeight" style="margin-top:8px;font-weight:600;font-size:14px;">排名维度权重总和: 100%</div>
+            </div>
+            <div id="dimensionsList" style="flex:1;overflow-y:auto;padding:15px 20px;">
+                <!-- 维度列表将在这里动态生成 -->
+            </div>
+            <div style="padding:20px;border-top:1px solid #e0e0e0;display:flex;gap:10px;justify-content:flex-end;">
+                <button onclick="resetDimensions()" style="padding:10px 20px;background:#f5f5f5;color:#666;border:none;border-radius:6px;cursor:pointer;font-size:14px;">重置为默认</button>
+                <button onclick="closeDimensionsModal()" style="padding:10px 20px;background:#e0e0e0;color:#333;border:none;border-radius:6px;cursor:pointer;font-size:14px;">取消</button>
+                <button onclick="saveDimensions()" style="padding:10px 20px;background:#28a745;color:white;border:none;border-radius:6px;cursor:pointer;font-size:14px;">保存配置</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 原始数据查看弹窗 -->
+    <div id="rawDataModal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:1000;align-items:center;justify-content:center;">
+        <div style="background:white;width:95%;max-width:1200px;max-height:90vh;border-radius:12px;box-shadow:0 4px 20px rgba(0,0,0,0.3);display:flex;flex-direction:column;">
+            <div style="padding:20px;border-bottom:1px solid #e0e0e0;display:flex;justify-content:space-between;align-items:center;">
+                <h3 style="margin:0;font-size:18px;">📊 原始数据查看</h3>
+                <button onclick="closeRawDataModal()" style="background:none;border:none;font-size:24px;cursor:pointer;color:#666;">&times;</button>
+            </div>
+            <div style="padding:15px 20px;background:#f8f9fa;display:flex;gap:10px;align-items:center;">
+                <input type="text" id="rawDataSearch" placeholder="搜索公司或字段..." 
+                    style="flex:1;padding:10px;border:1px solid #ddd;border-radius:6px;font-size:14px;"
+                    onkeyup="searchRawData()">
+                <button onclick="searchRawData()" style="padding:10px 20px;background:var(--primary);color:white;border:none;border-radius:6px;cursor:pointer;">搜索</button>
+                <button onclick="exportRawData()" style="padding:10px 20px;background:#28a745;color:white;border:none;border-radius:6px;cursor:pointer;">📥 导出CSV</button>
+            </div>
+            <div id="rawDataContent" style="flex:1;overflow:auto;padding:20px;">
+                <!-- 原始数据表格将在这里显示 -->
+            </div>
+            <div style="padding:15px 20px;border-top:1px solid #e0e0e0;background:#f8f9fa;font-size:12px;color:#666;">
+                💡 提示：表格可横向滚动查看所有字段，点击"导出CSV"可下载完整数据
+            </div>
+        </div>
+    </div>
+
+    <!-- 字段查询弹窗 -->
+    <div id="fieldQueryModal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:1000;align-items:center;justify-content:center;">
+        <div style="background:white;width:90%;max-width:600px;max-height:85vh;border-radius:12px;box-shadow:0 4px 20px rgba(0,0,0,0.3);display:flex;flex-direction:column;">
+            <div style="padding:20px;border-bottom:1px solid #e0e0e0;display:flex;justify-content:space-between;align-items:center;">
+                <h3 style="margin:0;font-size:18px;">🔍 字段查询</h3>
+                <button onclick="closeFieldQueryModal()" style="background:none;border:none;font-size:24px;cursor:pointer;color:#666;">&times;</button>
+            </div>
+            <div style="padding:20px;overflow-y:auto;">
+                <div style="margin-bottom:15px;">
+                    <label style="display:block;margin-bottom:8px;font-weight:600;">选择公司</label>
+                    <select id="fieldQueryCompany" style="width:100%;padding:10px;border:1px solid #ddd;border-radius:6px;font-size:14px;">
+                        <option value="">请选择公司</option>
+                    </select>
+                </div>
+                <div style="margin-bottom:15px;">
+                    <label style="display:block;margin-bottom:8px;font-weight:600;">搜索字段</label>
+                    <input type="text" id="fieldSearchInput" placeholder="输入关键词搜索字段..." 
+                        style="width:100%;padding:10px;border:1px solid #ddd;border-radius:6px;font-size:14px;margin-bottom:8px;"
+                        onkeyup="searchFields()">
+                </div>
+                <div style="margin-bottom:15px;">
+                    <label style="display:block;margin-bottom:8px;font-weight:600;">选择字段</label>
+                    <select id="fieldQueryField" style="width:100%;padding:10px;border:1px solid #ddd;border-radius:6px;font-size:14px;max-height:150px;" size="5">
+                        <option value="">请选择字段</option>
+                    </select>
+                    <p style="font-size:12px;color:#666;margin-top:5px;">提示：先输入关键词搜索，然后从列表中选择</p>
+                </div>
+                <button onclick="executeFieldQuery()" style="width:100%;padding:12px;background:#17a2b8;color:white;border:none;border-radius:6px;cursor:pointer;font-size:16px;font-weight:600;">
+                    🔍 查询
+                </button>
+                <div id="fieldQueryResult" style="margin-top:20px;">
+                    <!-- 查询结果将在这里显示 -->
+                </div>
+            </div>
+            <div style="padding:15px 20px;border-top:1px solid #e0e0e0;background:#f8f9fa;display:flex;gap:10px;justify-content:flex-end;">
+                <button onclick="sendQueryToChat()" style="padding:10px 20px;background:var(--primary);color:white;border:none;border-radius:6px;cursor:pointer;">发送到聊天</button>
+                <button onclick="closeFieldQueryModal()" style="padding:10px 20px;background:#e0e0e0;color:#333;border:none;border-radius:6px;cursor:pointer;">关闭</button>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
