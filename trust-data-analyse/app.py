@@ -3183,6 +3183,9 @@ def smart_query():
             'suggested_fields': available_fields
         })
 
+# ========== 注册智能卡片蓝图 ==========
+from app_smart_cards import register_smart_cards_blueprint
+register_smart_cards_blueprint(app)
 
 if __name__ == '__main__':
     os.makedirs('/data/user/work/static', exist_ok=True)
