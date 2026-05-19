@@ -1,0 +1,290 @@
+/**
+ * 智能卡片系统样式
+ * 为原有页面添加智能卡片相关的样式
+ */
+
+/* ========== 智能分析结果样式 ========== */
+
+.smart-analysis-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--border);
+}
+
+.smart-analysis-title {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--text);
+}
+
+.smart-analysis-icon {
+    font-size: 22px;
+}
+
+.smart-analysis-actions {
+    display: flex;
+    gap: 8px;
+}
+
+.smart-action-btn {
+    background: transparent;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 6px 10px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: all 0.2s;
+}
+
+.smart-action-btn:hover {
+    background: var(--primary-light);
+    border-color: var(--primary);
+}
+
+.cache-badge {
+    background: #e8f5e9;
+    color: #2e7d32;
+    font-size: 11px;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-weight: 500;
+}
+
+.fresh-badge {
+    background: #fff3e0;
+    color: #e65100;
+    font-size: 11px;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-weight: 500;
+}
+
+.smart-analysis-content {
+    line-height: 1.8;
+}
+
+.smart-analysis-content p {
+    margin-bottom: 12px;
+}
+
+.smart-analysis-content strong {
+    color: var(--primary);
+}
+
+/* ========== 加载指示器增强 ========== */
+
+.typing-indicator-wrapper .bubble {
+    background: #f0f4ff !important;
+}
+
+.typing-message {
+    font-size: 13px;
+    color: var(--text-secondary);
+    margin-bottom: 8px;
+}
+
+/* ========== 缓存管理面板 ========== */
+
+.cache-manager-panel {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.cache-manager-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+}
+
+.cache-manager-content {
+    position: relative;
+    background: white;
+    border-radius: 12px;
+    width: 90%;
+    max-width: 500px;
+    max-height: 80vh;
+    overflow: hidden;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+}
+
+.cache-manager-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--border);
+    background: var(--bg);
+}
+
+.cache-manager-header h3 {
+    font-size: 16px;
+    font-weight: 600;
+    margin: 0;
+}
+
+.cache-manager-header button {
+    background: none;
+    border: none;
+    font-size: 18px;
+    cursor: pointer;
+    color: var(--text-secondary);
+}
+
+.cache-manager-body {
+    padding: 20px;
+}
+
+.cache-stats {
+    margin-bottom: 20px;
+}
+
+.stat-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 10px 0;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.stat-row:last-child {
+    border-bottom: none;
+}
+
+.stat-row span:first-child {
+    color: var(--text-secondary);
+}
+
+.stat-row strong {
+    color: var(--primary);
+}
+
+.cache-actions {
+    display: flex;
+    gap: 12px;
+}
+
+.cache-actions button {
+    flex: 1;
+    padding: 10px 16px;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 13px;
+    transition: all 0.2s;
+}
+
+.cache-actions button:first-child {
+    background: var(--primary);
+    color: white;
+}
+
+.cache-actions button:first-child:hover {
+    background: #1557b0;
+}
+
+.cache-actions button:last-child {
+    background: #f5f5f5;
+    color: var(--text);
+}
+
+.cache-actions button:last-child:hover {
+    background: #e0e0e0;
+}
+
+/* ========== 卡片缓存状态指示 ========== */
+
+.catalog-card {
+    position: relative;
+}
+
+.catalog-card.cached::after {
+    content: '';
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    width: 8px;
+    height: 8px;
+    background: #4caf50;
+    border-radius: 50%;
+    box-shadow: 0 0 0 2px white;
+}
+
+/* ========== 自定义卡片样式 ========== */
+
+.custom-card-section {
+    margin-top: 20px;
+    padding-top: 20px;
+    border-top: 1px dashed var(--border);
+}
+
+.custom-card-section-title {
+    font-size: 13px;
+    color: var(--text-secondary);
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.add-card-btn {
+    width: 100%;
+    padding: 10px;
+    border: 2px dashed var(--border);
+    border-radius: 8px;
+    background: transparent;
+    color: var(--text-secondary);
+    cursor: pointer;
+    font-size: 13px;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+}
+
+.add-card-btn:hover {
+    border-color: var(--primary);
+    color: var(--primary);
+    background: var(--primary-light);
+}
+
+/* ========== 快捷提问增强 ========== */
+
+.suggestion-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.suggestion-item .icon {
+    font-size: 14px;
+}
+
+/* ========== 响应式调整 ========== */
+
+@media (max-width: 768px) {
+    .smart-analysis-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 10px;
+    }
+
+    .cache-actions {
+        flex-direction: column;
+    }
+}
