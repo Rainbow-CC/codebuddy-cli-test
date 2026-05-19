@@ -604,7 +604,7 @@
                 <div class="catalog-section" id="catalogSection">
                     <div class="catalog-title">📋 调研板块总览（10大维度 · 点击卡片直接提问）</div>
                     <div class="catalog-grid">
-                        <div class="catalog-card" onclick="askQuestion('行业整体科技建设情况概览')">
+                        <div class="catalog-card" data-card-id="industry_overview" onclick="askQuestion('行业整体科技建设情况概览')">
                             <div class="card-icon">📊</div>
                             <div class="card-title">行业概览</div>
                             <div class="card-desc">科技投入趋势、人员占比、CIO设立等核心指标汇总</div>
@@ -613,7 +613,7 @@
                                 <span class="card-q">整体情况</span>
                             </div>
                         </div>
-                        <div class="catalog-card" onclick="askQuestion('科技投入分析')">
+                        <div class="catalog-card" data-card-id="tech_strategy" onclick="askQuestion('科技战略定位分析')">
                             <div class="card-icon">💰</div>
                             <div class="card-title">科技战略定位</div>
                             <div class="card-desc">金融科技战略、数字化转型战略、数据治理战略等6项规划发布情况</div>
@@ -622,7 +622,7 @@
                                 <span class="card-q">数字化转型</span>
                             </div>
                         </div>
-                        <div class="catalog-card" onclick="askQuestion('科技投入分析')">
+                        <div class="catalog-card" data-card-id="resource_investment" onclick="askQuestion('科技投入分析')">
                             <div class="card-icon">💵</div>
                             <div class="card-title">资源投入与配置</div>
                             <div class="card-desc">2023-2026年科技投入、人员配置、科技团队/外包团队规模</div>
@@ -632,7 +632,7 @@
                                 <span class="card-q">外包团队</span>
                             </div>
                         </div>
-                        <div class="catalog-card" onclick="askQuestion('组织架构与治理分析')">
+                        <div class="catalog-card" data-card-id="organization" onclick="askQuestion('组织架构与治理分析')">
                             <div class="card-icon">🏢</div>
                             <div class="card-title">组织架构与人才培养</div>
                             <div class="card-desc">治理机构设立、科技部门设置、CIO配置、认证资质、人才流动</div>
@@ -642,7 +642,7 @@
                                 <span class="card-q">认证资质</span>
                             </div>
                         </div>
-                        <div class="catalog-card" onclick="askQuestion('基础设施架构模式分布')">
+                        <div class="catalog-card" data-card-id="infrastructure" onclick="askQuestion('基础设施架构模式分布')">
                             <div class="card-icon">🏗️</div>
                             <div class="card-title">基础设施架构</div>
                             <div class="card-desc">机房架构模式、服务器虚拟化、桌面虚拟化、公有云平台使用</div>
@@ -652,7 +652,7 @@
                                 <span class="card-q">虚拟化</span>
                             </div>
                         </div>
-                        <div class="catalog-card" onclick="askQuestion('信创转型进展')">
+                        <div class="catalog-card" data-card-id="xinchuang" onclick="askQuestion('信创转型进展')">
                             <div class="card-icon">🖥️</div>
                             <div class="card-title">信创转型与进展</div>
                             <div class="card-desc">信创进展阶段、信创系统占比、芯片/服务器/操作系统/数据库/中间件品牌选择</div>
@@ -661,7 +661,7 @@
                                 <span class="card-q">品牌选择</span>
                             </div>
                         </div>
-                        <div class="catalog-card" onclick="askQuestion('人工智能应用情况')">
+                        <div class="catalog-card" data-card-id="high_tech" onclick="askQuestion('人工智能应用情况')">
                             <div class="card-icon">🤖</div>
                             <div class="card-title">高新技术应用</div>
                             <div class="card-desc">人工智能、大数据、云原生、区块链四大技术的应用场景与阶段</div>
@@ -672,7 +672,7 @@
                                 <span class="card-q">区块链</span>
                             </div>
                         </div>
-                        <div class="catalog-card" onclick="askQuestion('业务系统部署情况')">
+                        <div class="catalog-card" data-card-id="business_systems" onclick="askQuestion('业务系统部署情况')">
                             <div class="card-icon">💻</div>
                             <div class="card-title">业务应用系统建设</div>
                             <div class="card-desc">27类业务系统部署覆盖率、自研/合作/外采比例、未来3-5年投入方向</div>
@@ -681,7 +681,7 @@
                                 <span class="card-q">未来方向</span>
                             </div>
                         </div>
-                        <div class="catalog-card" onclick="askQuestion('数字化渠道覆盖情况')">
+                        <div class="catalog-card" data-card-id="digital_channels" onclick="askQuestion('数字化渠道覆盖情况')">
                             <div class="card-icon">📱</div>
                             <div class="card-title">数字化客户服务渠道</div>
                             <div class="card-desc">APP/小程序/网站等渠道覆盖、远程面签/智能客服/电子合同等功能</div>
@@ -691,7 +691,7 @@
                                 <span class="card-q">智能客服</span>
                             </div>
                         </div>
-                        <div class="catalog-card" onclick="askQuestion('数据治理现状分析')">
+                        <div class="catalog-card" data-card-id="data_governance" onclick="askQuestion('数据治理现状分析')">
                             <div class="card-icon">🗄️</div>
                             <div class="card-title">数据治理与安全</div>
                             <div class="card-desc">数据中台建设、数据质量管理、分类分级、数据安全/DLP管控</div>
@@ -701,7 +701,7 @@
                                 <span class="card-q">数据中台</span>
                             </div>
                         </div>
-                        <div class="catalog-card" onclick="askQuestion('综合排名TOP10')">
+                        <div class="catalog-card"  onclick="askQuestion('综合排名TOP10')">
                             <div class="card-icon">📊</div>
                             <div class="card-title">综合实力排名</div>
                             <div class="card-desc">八大评价维度（战略定位为参考维度不参与排名，其余七维度：资源20%+组织15%+设施10%+信创10%+技术15%+系统10%+数安10%）</div>
@@ -710,7 +710,7 @@
                                 <span class="card-q">八大维度</span>
                             </div>
                         </div>
-                        <div class="catalog-card" onclick="askQuestion('头部标杆分析')">
+                        <div class="catalog-card"  onclick="askQuestion('头部标杆分析')">
                             <div class="card-icon">🏆</div>
                             <div class="card-title">头部标杆分析</div>
                             <div class="card-desc">10家头部公司高端水平对标：中信/平安/华润/建信/交银/华能/上海/中诚/外贸/紫金</div>

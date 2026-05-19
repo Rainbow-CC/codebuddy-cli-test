@@ -86,4 +86,4 @@ WHERE original_question LIKE '%外包%' OR original_question LIKE '%投入%';
 1. **空值处理**: 部分公司未填写某些项，SQL 查询时注意使用 `WHERE [COLUMN_ID] IS NOT NULL`。
 2. **模糊匹配**: 公司简称搜索时建议使用 `LIKE '%公司名%'`。
 3. **元数据依赖**: 永远先查 `metadata`，不要假设字段 ID 永远不变。
-4. **专注于用户的问题，不要做额外的分析**
+4. **专注于用户的问题**: 仅回答用户问题，不回答数据库搜索细节。

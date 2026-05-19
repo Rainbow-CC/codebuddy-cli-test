@@ -109,6 +109,24 @@ DEFAULT_CARDS = [
         "description": "数据中台建设、数据质量管理、分类分级、数据安全/DLP管控",
         "tags": ["数据治理", "数据安全"],
         "category": "governance"
+    },
+    {
+        "id": "ranking_top10",
+        "title": "综合实力排名",
+        "icon": "📊",
+        "query": "综合排名TOP10",
+        "description": "八大评价维度综合排名分析",
+        "tags": ["综合排名", "八大维度"],
+        "category": "ranking"
+    },
+    {
+        "id": "head_benchmark",
+        "title": "头部标杆分析",
+        "icon": "🏆",
+        "query": "头部标杆分析",
+        "description": "10家头部公司高端水平对标分析",
+        "tags": ["头部标杆", "高端对标", "头部排名"],
+        "category": "benchmark"
     }
 ]
 
@@ -170,11 +188,37 @@ class SmartCardManager:
             try:
                 with open(CARDS_CONFIG_FILE, 'r', encoding='utf-8') as f:
                     self.cards_config = json.load(f)
+                self._merge_default_config()
             except Exception as e:
                 print(f"加载卡片配置失败: {e}")
                 self._init_default_config()
         else:
             self._init_default_config()
+
+    def _merge_default_config(self):
+        """补齐新增的默认卡片和快捷提问，保留用户自定义配置。"""
+        changed = False
+
+        existing_cards = {
+            card.get("id")
+            for card in self.cards_config.get("preset_cards", [])
+        }
+        for card in DEFAULT_CARDS:
+            if card["id"] not in existing_cards:
+                self.cards_config.setdefault("preset_cards", []).append(card)
+                changed = True
+
+        existing_questions = {
+            question.get("id")
+            for question in self.cards_config.get("quick_questions", [])
+        }
+        for question in DEFAULT_QUICK_QUESTIONS:
+            if question["id"] not in existing_questions:
+                self.cards_config.setdefault("quick_questions", []).append(question)
+                changed = True
+
+        if changed:
+            self._save_cards_config()
     
     def _init_default_config(self):
         """初始化默认配置"""
@@ -363,7 +407,8 @@ class SmartCardManager:
         # 调用Agent生成新响应
         try:
             import asyncio
-            result = asyncio.run(agent_func(card["query"]))
+            generated = agent_func(card["query"])
+            result = asyncio.run(generated) if hasattr(generated, "__await__") else generated
             
             # 缓存新响应
             self.cache_response(

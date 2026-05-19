@@ -1,8 +1,11 @@
 # -*- coding: utf-8 -*-
-import json, re, os, base64, io, math
+import os
+import sys
+
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+import json, re, base64
 from flask import Flask, request, jsonify, send_from_directory, current_app
 from flask_cors import CORS
-import pandas as pd
 import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
@@ -25,8 +28,9 @@ from flask import Response, stream_with_context
 @app.route('/api/chat-agent', methods=['POST'])
 def chat_agent():
     """LangGraph Agent 问答接口 (阻塞式)"""
-    query = request.json.get('query', '')
-    thread_id = request.json.get('thread_id', 'user_default')
+    data = request.get_json(silent=True) or {}
+    query = data.get('query', '')
+    thread_id = data.get('thread_id', 'user_default')
     
     if not query.strip():
         return jsonify({'error': '请输入问题'}), 400
@@ -41,8 +45,9 @@ def chat_agent():
 @app.route('/api/chat-agent/stream', methods=['POST'])
 def chat_agent_stream():
     """LangGraph Agent 问答接口 (流式 SSE)"""
-    query = request.json.get('query', '')
-    thread_id = request.json.get('thread_id', 'user_default')
+    data = request.get_json(silent=True) or {}
+    query = data.get('query', '')
+    thread_id = data.get('thread_id', 'user_default')
     
     if not query.strip():
         return jsonify({'error': '请输入问题'}), 400
@@ -198,10 +203,18 @@ FIELD_MAP = {
 
 def get_field_col(field_name):
     """Get column name for a known field"""
+    if not field_name:
+        return None
+    if field_name in columns_info.values():
+        return field_name
     idx = FIELD_MAP.get(field_name)
     if idx:
         return columns_info.get(idx)
     return None
+
+def resolve_field_col(field_name):
+    """Resolve either a friendly field alias or a raw survey column name."""
+    return get_field_col(field_name)
 
 # Build keyword -> column mappings for smart search
 keyword_col_map = {}
@@ -2742,7 +2755,8 @@ def index():
 # chatbox message handler
 @app.route('/api/analyze', methods=['POST'])
 def analyze():
-    query = request.json.get('query', '')
+    data = request.get_json(silent=True) or {}
+    query = data.get('query', '')
     if not query.strip():
         return jsonify({'error': '请输入问题'}), 400
     result, charts = route_query(query)

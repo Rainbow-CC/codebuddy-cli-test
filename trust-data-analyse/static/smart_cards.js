@@ -376,24 +376,16 @@ function updateQuickQuestionsList() {
 
 // 更新卡片点击处理器
 function updateCardClickHandlers() {
-    // 为所有catalog-card添加智能分析功能
+    // 只有显式声明 data-card-id 的目录卡片才启用智能分析。
     const cards = document.querySelectorAll('.catalog-card');
     cards.forEach(card => {
-        const onclick = card.getAttribute('onclick');
-        if (onclick && onclick.includes('askQuestion')) {
-            // 提取原有的查询文本
-            const match = onclick.match(/askQuestion\(['"](.+?)['"]\)/);
-            if (match) {
-                const query = match[1];
-                // 查找对应的卡片ID
-                const cardData = smartCardManager.cards.find(c => c.query === query);
-                if (cardData) {
-                    // 更新onclick为智能分析版本
-                    card.setAttribute('onclick', `askQuestion('${query}', '${cardData.id}')`);
-                    // 添加缓存状态指示
-                    updateCardCacheIndicator(card, cardData.id);
-                }
-            }
+        const cardId = card.dataset.cardId;
+        if (!cardId) return;
+
+        const cardData = smartCardManager.cards.find(c => c.id === cardId);
+        if (cardData) {
+            card.onclick = () => askQuestion(cardData.query, cardData.id);
+            updateCardCacheIndicator(card, cardData.id);
         }
     });
 }

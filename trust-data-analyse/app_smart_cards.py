@@ -46,7 +46,7 @@ def get_custom_cards():
 @smart_cards_bp.route('/cards/custom', methods=['POST'])
 def add_custom_card():
     """添加自定义卡片"""
-    data = request.json
+    data = request.get_json(silent=True) or {}
     title = data.get('title', '').strip()
     query = data.get('query', '').strip()
     description = data.get('description', '')
@@ -69,7 +69,7 @@ def add_custom_card():
 @smart_cards_bp.route('/cards/custom/<card_id>', methods=['PUT'])
 def update_custom_card(card_id):
     """更新自定义卡片"""
-    data = request.json
+    data = request.get_json(silent=True) or {}
     card = card_manager.update_custom_card(card_id, **data)
     if card:
         return jsonify({'success': True, 'card': card})
@@ -95,7 +95,7 @@ def get_quick_questions():
 @smart_cards_bp.route('/quick-questions', methods=['POST'])
 def add_quick_question():
     """添加快捷提问"""
-    data = request.json
+    data = request.get_json(silent=True) or {}
     text = data.get('text', '').strip()
     icon = data.get('icon', '💬')
     
@@ -135,7 +135,8 @@ def analyze_card(card_id):
     query = card['query']
     
     # 检查是否有强制刷新参数
-    force_refresh = request.json.get('force_refresh', False)
+    data = request.get_json(silent=True) or {}
+    force_refresh = data.get('force_refresh', False)
     
     # 尝试获取缓存
     if not force_refresh:
@@ -179,7 +180,7 @@ def analyze_card(card_id):
 def regenerate_card(card_id):
     """重新生成卡片分析（强制刷新缓存）"""
     def agent_func(query):
-        return asyncio.run(get_agent_response(query, f"card_{card_id}_regen"))
+        return get_agent_response(query, f"card_{card_id}_regen")
     
     result = card_manager.regenerate_card_response(card_id, agent_func)
     
@@ -259,7 +260,7 @@ def get_cache_stats():
 @smart_cards_bp.route('/cache/clear', methods=['POST'])
 def clear_cache():
     """清除缓存"""
-    data = request.json or {}
+    data = request.get_json(silent=True) or {}
     card_id = data.get('card_id')
     
     if card_id:
@@ -337,4 +338,4 @@ def init_cards_cache():
 def register_smart_cards_blueprint(app):
     """注册智能卡片蓝图到Flask应用"""
     app.register_blueprint(smart_cards_bp)
-    print("✅ 智能卡片API已注册")
+    print("Smart card API registered")
