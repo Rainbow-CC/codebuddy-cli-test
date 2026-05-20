@@ -287,15 +287,140 @@ function hideTypingIndicator() {
 }
 
 // 重新生成当前卡片
+// 创建智能分析的流式占位占点消息气泡
+function createSmartAnalysisPlaceholder(item, isQuickQuestion = false) {
+    const title = item.title || item.text;
+    const icon = item.icon || '🤖';
+
+    const welcomeEl = typeof welcome !== 'undefined' ? welcome : document.getElementById('welcome');
+    if (welcomeEl) welcomeEl.style.display = 'none';
+
+    const catalogSection = document.getElementById('catalogSection');
+    if (catalogSection) catalogSection.style.display = 'none';
+
+    const container = typeof chatMessages !== 'undefined' ? chatMessages : document.getElementById('chatMessages');
+
+    const div = document.createElement('div');
+    div.className = 'message message-assistant';
+    
+    div.innerHTML = `
+        <div class="avatar">🤖</div>
+        <div class="bubble">
+            <div class="smart-analysis-header">
+                <div class="smart-analysis-title">
+                    <span class="smart-analysis-icon">${icon}</span>
+                    <span>${escapeHtml(title)}</span>
+                    <span class="badge-placeholder"></span>
+                </div>
+                <div class="smart-analysis-actions">
+                    <button class="smart-action-btn" onclick="regenerateCurrentCard()" title="重新生成">
+                        🔄
+                    </button>
+                    <button class="smart-action-btn" onclick="copyAnalysisResult()" title="复制结果">
+                        📋
+                    </button>
+                </div>
+            </div>
+            <div class="smart-analysis-content">
+                <div class="typing-indicator" style="margin: 10px 0;">
+                    <span></span><span></span><span></span>
+                </div>
+            </div>
+        </div>
+    `;
+
+    container.appendChild(div);
+    container.scrollTop = container.scrollHeight;
+
+    return {
+        messageDiv: div,
+        contentDiv: div.querySelector('.smart-analysis-content'),
+        badgePlaceholder: div.querySelector('.badge-placeholder')
+    };
+}
+
+// 流式获取智能分析结果并实时渲染
+async function streamSmartAnalysis(endpoint, payload, item, isQuickQuestion = false) {
+    const placeholder = createSmartAnalysisPlaceholder(item, isQuickQuestion);
+    const contentDiv = placeholder.contentDiv;
+    const badgePlaceholder = placeholder.badgePlaceholder;
+    const container = typeof chatMessages !== 'undefined' ? chatMessages : document.getElementById('chatMessages');
+    
+    let fullContent = "";
+    let badgeSet = false;
+
+    try {
+        const response = await fetch(endpoint, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+
+        if (!response.ok) {
+            throw new Error(`HTTP 错误！状态码: ${response.status}`);
+        }
+
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+
+        while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+
+            const chunk = decoder.decode(value);
+            const lines = chunk.split('\n');
+
+            for (const line of lines) {
+                if (line.trim().startsWith('data: ')) {
+                    try {
+                        const data = JSON.parse(line.trim().substring(6));
+                        if (data.error) {
+                            contentDiv.innerHTML = `<span style="color:#c5221f">分析失败: ${escapeHtml(data.error)}</span>`;
+                            return;
+                        }
+                        
+                        // 动态设置缓存/实时生成徽章
+                        if (!badgeSet) {
+                            const isCached = data.cached;
+                            badgePlaceholder.innerHTML = isCached 
+                                ? '<span class="cache-badge">已缓存</span>' 
+                                : '<span class="fresh-badge">实时生成</span>';
+                            badgeSet = true;
+                        }
+
+                        if (data.content) {
+                            fullContent += data.content;
+                            // 实时刷新内容渲染
+                            contentDiv.innerHTML = formatAnalysisResult(fullContent);
+                            container.scrollTop = container.scrollHeight;
+                        }
+                    } catch (e) {
+                        console.error("解析流数据出错", e);
+                    }
+                }
+            }
+        }
+    } catch (e) {
+        console.error("流式读取失败:", e);
+        contentDiv.innerHTML = `<span style="color:#c5221f">分析失败: ${escapeHtml(e.message)}</span>`;
+    }
+}
+
+// 重新生成当前卡片
 async function regenerateCurrentCard() {
     if (!smartCardManager.currentCardId) {
         alert('请先选择一个卡片');
         return;
     }
 
+    const card = smartCardManager.cards.find(c => c.id === smartCardManager.currentCardId);
+    if (!card) {
+        alert('未找到当前卡片配置');
+        return;
+    }
+
     try {
-        const data = await smartCardManager.regenerateCard(smartCardManager.currentCardId);
-        displaySmartAnalysis(data);
+        await streamSmartAnalysis(`/api/cards/${card.id}/analyze/stream`, { force_refresh: true }, card, false);
     } catch (e) {
         addMessage(`<p style="color: #c5221f;">重新生成失败: ${escapeHtml(e.message)}</p>`, false);
     }
@@ -317,14 +442,19 @@ function copyAnalysisResult() {
 // 重写askQuestion函数，支持智能卡片
 const originalAskQuestion = window.askQuestion;
 window.askQuestion = async function(text, cardId = null) {
-    // 如果提供了cardId，使用智能卡片分析
+    // 如果提供了cardId，使用智能卡片流式分析
     if (cardId) {
         try {
             queryInput.value = text;
             addMessage(text, true);
 
-            const data = await smartCardManager.analyzeCard(cardId);
-            displaySmartAnalysis(data);
+            const card = smartCardManager.cards.find(c => c.id === cardId);
+            if (!card) {
+                throw new Error('卡片不存在');
+            }
+            smartCardManager.currentCardId = cardId;
+
+            await streamSmartAnalysis(`/api/cards/${cardId}/analyze/stream`, {}, card, false);
         } catch (e) {
             addMessage(`<p style="color: #c5221f;">分析失败: ${escapeHtml(e.message)}</p>`, false);
         }
@@ -341,8 +471,12 @@ async function askQuickQuestion(questionId, text) {
         queryInput.value = text;
         addMessage(text, true);
 
-        const data = await smartCardManager.analyzeQuickQuestion(questionId);
-        displaySmartAnalysis(data, true);
+        const question = smartCardManager.quickQuestions.find(q => q.id === questionId);
+        if (!question) {
+            throw new Error('问题不存在');
+        }
+
+        await streamSmartAnalysis(`/api/quick-questions/${questionId}/analyze/stream`, {}, question, true);
     } catch (e) {
         addMessage(`<p style="color: #c5221f;">分析失败: ${escapeHtml(e.message)}</p>`, false);
     }

@@ -3,8 +3,9 @@
 智能卡片API扩展模块
 为app.py添加智能卡片相关的API路由
 """
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request, jsonify, Response, stream_with_context
 import asyncio
+import json
 
 # 导入智能卡片管理器
 from smart_card_manager import get_card_manager
@@ -16,7 +17,7 @@ smart_cards_bp = Blueprint('smart_cards', __name__, url_prefix='/api')
 card_manager = get_card_manager()
 
 # 导入Agent响应函数（需要在主app中定义）
-from agent import get_agent_response
+from agent import get_agent_response, get_agent_streaming_response
 
 
 # ========== 卡片配置API ==========
@@ -176,6 +177,69 @@ def analyze_card(card_id):
         return jsonify({'error': str(e)}), 500
 
 
+@smart_cards_bp.route('/cards/<card_id>/analyze/stream', methods=['POST'])
+def analyze_card_stream(card_id):
+    """
+    流式分析卡片内容 (SSE)
+    如果缓存存在则直接流式返回完整缓存，否则实时生成并流式返回且写入缓存
+    """
+    # 查找卡片
+    card = None
+    for c in card_manager.get_all_cards():
+        if c['id'] == card_id:
+            card = c
+            break
+    
+    if not card:
+        return jsonify({'error': '卡片不存在'}), 404
+    
+    query = card['query']
+    
+    # 检查是否有强制刷新参数
+    data = request.get_json(silent=True) or {}
+    force_refresh = data.get('force_refresh', False)
+    
+    # 尝试获取缓存
+    if not force_refresh:
+        cached = card_manager.get_cached_response(query, card_id)
+        if cached:
+            def generate_cached():
+                yield f"data: {json.dumps({'content': cached['result'], 'cached': True, 'success': True, 'card_id': card_id, 'card_title': card['title']})}\n\n"
+            return Response(stream_with_context(generate_cached()), mimetype='text/event-stream')
+    
+    # 调用Agent流式生成响应并缓存
+    def generate_stream():
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        gen = get_agent_streaming_response(query, f"card_{card_id}")
+        full_response = []
+        try:
+            while True:
+                try:
+                    chunk = loop.run_until_complete(gen.__anext__())
+                    if chunk:
+                        full_response.append(chunk)
+                        yield f"data: {json.dumps({'content': chunk, 'cached': False, 'success': True, 'card_id': card_id, 'card_title': card['title']})}\n\n"
+                except StopAsyncIteration:
+                    # 成功结束时保存到缓存
+                    full_content = "".join(full_response)
+                    if full_content.strip():
+                        card_manager.cache_response(
+                            query=query,
+                            result=full_content,
+                            charts=[],
+                            card_id=card_id
+                        )
+                    break
+                except Exception as e:
+                    yield f"data: {json.dumps({'error': str(e)})}\n\n"
+                    break
+        finally:
+            loop.close()
+
+    return Response(stream_with_context(generate_stream()), mimetype='text/event-stream')
+
+
 @smart_cards_bp.route('/cards/<card_id>/regenerate', methods=['POST'])
 def regenerate_card(card_id):
     """重新生成卡片分析（强制刷新缓存）"""
@@ -247,6 +311,64 @@ def analyze_quick_question(question_id):
         })
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+
+
+@smart_cards_bp.route('/quick-questions/<question_id>/analyze/stream', methods=['POST'])
+def analyze_quick_question_stream(question_id):
+    """
+    流式分析快捷提问 (SSE)
+    如果缓存存在则直接流式返回完整缓存，否则实时生成并流式返回且写入缓存
+    """
+    # 查找问题
+    question = None
+    for q in card_manager.get_quick_questions():
+        if q['id'] == question_id:
+            question = q
+            break
+    
+    if not question:
+        return jsonify({'error': '问题不存在'}), 404
+    
+    query = question['text']
+    
+    # 检查缓存
+    cached = card_manager.get_cached_response(query, question_id)
+    if cached:
+        def generate_cached():
+            yield f"data: {json.dumps({'content': cached['result'], 'cached': True, 'success': True, 'question_id': question_id})}\n\n"
+        return Response(stream_with_context(generate_cached()), mimetype='text/event-stream')
+    
+    # 调用Agent流式生成响应并缓存
+    def generate_stream():
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        gen = get_agent_streaming_response(query, f"qq_{question_id}")
+        full_response = []
+        try:
+            while True:
+                try:
+                    chunk = loop.run_until_complete(gen.__anext__())
+                    if chunk:
+                        full_response.append(chunk)
+                        yield f"data: {json.dumps({'content': chunk, 'cached': False, 'success': True, 'question_id': question_id})}\n\n"
+                except StopAsyncIteration:
+                    # 成功结束时保存到缓存
+                    full_content = "".join(full_response)
+                    if full_content.strip():
+                        card_manager.cache_response(
+                            query=query,
+                            result=full_content,
+                            charts=[],
+                            card_id=question_id
+                        )
+                    break
+                except Exception as e:
+                    yield f"data: {json.dumps({'error': str(e)})}\n\n"
+                    break
+        finally:
+            loop.close()
+
+    return Response(stream_with_context(generate_stream()), mimetype='text/event-stream')
 
 
 # ========== 缓存管理API ==========
