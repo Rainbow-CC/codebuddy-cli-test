@@ -6,17 +6,16 @@
 import json
 import os
 import hashlib
+import sqlite3
 from datetime import datetime
 from pathlib import Path
 from typing import Dict, List, Optional, Any
 
-# 缓存文件路径
+# 缓存文件与数据库目录
 CACHE_DIR = Path(__file__).parent / "smart_card_cache"
-CACHE_FILE = CACHE_DIR / "card_responses.json"
-CARDS_CONFIG_FILE = CACHE_DIR / "cards_config.json"
-
-# 确保缓存目录存在
 CACHE_DIR.mkdir(exist_ok=True)
+CACHE_DB_FILE = CACHE_DIR / "smart_card_cache.db"
+CARDS_CONFIG_FILE = CACHE_DIR / "cards_config.json"
 
 # 默认预制卡片配置
 DEFAULT_CARDS = [
@@ -153,34 +152,33 @@ class SmartCardManager:
     """智能卡片管理器"""
     
     def __init__(self):
-        self.responses_cache: Dict[str, Any] = {}
+        self.db_path = CACHE_DB_FILE
         self.cards_config: Dict[str, Any] = {
             "preset_cards": [],
             "custom_cards": [],
             "quick_questions": []
         }
-        self._load_cache()
+        self._init_db()
         self._load_cards_config()
     
-    def _load_cache(self):
-        """加载缓存的响应数据"""
-        if CACHE_FILE.exists():
-            try:
-                with open(CACHE_FILE, 'r', encoding='utf-8') as f:
-                    self.responses_cache = json.load(f)
-            except Exception as e:
-                print(f"加载缓存失败: {e}")
-                self.responses_cache = {}
-        else:
-            self.responses_cache = {}
-    
-    def _save_cache(self):
-        """保存缓存数据"""
+    def _init_db(self):
+        """初始化 SQLite 缓存表"""
         try:
-            with open(CACHE_FILE, 'w', encoding='utf-8') as f:
-                json.dump(self.responses_cache, f, ensure_ascii=False, indent=2)
+            with sqlite3.connect(self.db_path) as conn:
+                cursor = conn.cursor()
+                cursor.execute("""
+                    CREATE TABLE IF NOT EXISTS smart_card_cache (
+                        cache_key TEXT PRIMARY KEY,
+                        query TEXT,
+                        result TEXT,
+                        charts TEXT,
+                        cached_at TEXT,
+                        card_id TEXT
+                    )
+                """)
+                conn.commit()
         except Exception as e:
-            print(f"保存缓存失败: {e}")
+            print(f"初始化缓存数据库失败: {e}")
     
     def _load_cards_config(self):
         """加载卡片配置"""
@@ -331,55 +329,100 @@ class SmartCardManager:
     # ========== 缓存响应管理 ==========
     
     def get_cached_response(self, query: str, card_id: Optional[str] = None) -> Optional[Dict]:
-        """获取缓存的响应"""
+        """从 SQLite 数据库获取缓存的响应"""
         cache_key = self._generate_cache_key(query, card_id)
-        cached = self.responses_cache.get(cache_key)
-        if cached:
-            return {
-                "result": cached["result"],
-                "charts": cached.get("charts", []),
-                "cached": True,
-                "cached_at": cached.get("cached_at"),
-                "card_id": card_id
-            }
+        try:
+            with sqlite3.connect(self.db_path) as conn:
+                cursor = conn.cursor()
+                cursor.execute(
+                    "SELECT result, charts, cached_at FROM smart_card_cache WHERE cache_key = ?",
+                    (cache_key,)
+                )
+                row = cursor.fetchone()
+                if row:
+                    try:
+                        charts = json.loads(row[1]) if row[1] else []
+                    except Exception:
+                        charts = []
+                    return {
+                        "result": row[0],
+                        "charts": charts,
+                        "cached": True,
+                        "cached_at": row[2],
+                        "card_id": card_id
+                    }
+        except Exception as e:
+            print(f"读取 SQLite 缓存出错: {e}")
         return None
     
     def cache_response(self, query: str, result: str, charts: List[str] = None, 
                       card_id: Optional[str] = None):
-        """缓存响应"""
+        """将响应缓存到 SQLite 数据库"""
         cache_key = self._generate_cache_key(query, card_id)
-        self.responses_cache[cache_key] = {
-            "query": query,
-            "result": result,
-            "charts": charts or [],
-            "cached_at": datetime.now().isoformat(),
-            "card_id": card_id
-        }
-        self._save_cache()
+        charts_str = json.dumps(charts or [])
+        cached_at = datetime.now().isoformat()
+        try:
+            with sqlite3.connect(self.db_path) as conn:
+                cursor = conn.cursor()
+                cursor.execute(
+                    """
+                    INSERT OR REPLACE INTO smart_card_cache 
+                    (cache_key, query, result, charts, cached_at, card_id) 
+                    VALUES (?, ?, ?, ?, ?, ?)
+                    """,
+                    (cache_key, query, result, charts_str, cached_at, card_id)
+                )
+                conn.commit()
+        except Exception as e:
+            print(f"写入 SQLite 缓存出错: {e}")
     
     def clear_card_cache(self, card_id: str):
-        """清除特定卡片的缓存"""
-        keys_to_delete = []
-        for key, value in self.responses_cache.items():
-            if value.get("card_id") == card_id:
-                keys_to_delete.append(key)
-        for key in keys_to_delete:
-            del self.responses_cache[key]
-        if keys_to_delete:
-            self._save_cache()
+        """从 SQLite 中清除特定卡片的缓存"""
+        try:
+            with sqlite3.connect(self.db_path) as conn:
+                cursor = conn.cursor()
+                cursor.execute("DELETE FROM smart_card_cache WHERE card_id = ?", (card_id,))
+                conn.commit()
+        except Exception as e:
+            print(f"清除 SQLite 卡片缓存出错: {e}")
     
     def clear_all_cache(self):
-        """清除所有缓存"""
-        self.responses_cache = {}
-        self._save_cache()
+        """清空 SQLite 缓存表"""
+        try:
+            with sqlite3.connect(self.db_path) as conn:
+                cursor = conn.cursor()
+                cursor.execute("DELETE FROM smart_card_cache")
+                conn.commit()
+        except Exception as e:
+            print(f"清空 SQLite 缓存表出错: {e}")
     
     def get_cache_stats(self) -> Dict:
-        """获取缓存统计"""
-        total = len(self.responses_cache)
-        preset_cached = sum(1 for v in self.responses_cache.values() 
-                          if v.get("card_id") and not v.get("card_id", "").startswith("custom_"))
-        custom_cached = sum(1 for v in self.responses_cache.values() 
-                          if v.get("card_id", "").startswith("custom_"))
+        """从 SQLite 中获取缓存统计"""
+        total = 0
+        preset_cached = 0
+        custom_cached = 0
+        try:
+            with sqlite3.connect(self.db_path) as conn:
+                cursor = conn.cursor()
+                
+                # 统计总数
+                cursor.execute("SELECT count(*) FROM smart_card_cache")
+                total = cursor.fetchone()[0]
+                
+                # 统计预制卡片缓存 (不以 custom_ 开头，且不为 NULL)
+                cursor.execute(
+                    "SELECT count(*) FROM smart_card_cache WHERE card_id IS NOT NULL AND card_id NOT LIKE 'custom_%'"
+                )
+                preset_cached = cursor.fetchone()[0]
+                
+                # 统计自定义卡片缓存
+                cursor.execute(
+                    "SELECT count(*) FROM smart_card_cache WHERE card_id LIKE 'custom_%'"
+                )
+                custom_cached = cursor.fetchone()[0]
+        except Exception as e:
+            print(f"获取 SQLite 缓存统计出错: {e}")
+            
         return {
             "total_cached": total,
             "preset_cached": preset_cached,
