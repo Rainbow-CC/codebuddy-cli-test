@@ -1,0 +1,10 @@
+# Byte-compiled / optimized / DLL support
+__pycache__/
+*.py[cod]
+*$py.class
+
+# IDE files
+.idea/
+
+# App-specific caches
+trust-data-analyse/smart_card_cache/
