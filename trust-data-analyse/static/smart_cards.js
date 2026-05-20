@@ -246,7 +246,10 @@ function displaySmartAnalysis(data, isQuickQuestion = false) {
 
 // 格式化分析结果
 function formatAnalysisResult(result) {
-    // 将Markdown风格的格式转换为HTML
+    if (typeof marked !== 'undefined') {
+        return marked.parse(result, { breaks: true, gfm: true });
+    }
+    // 将Markdown风格的格式转换为HTML (备用方案)
     let formatted = result
         .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
         .replace(/\n\n/g, '</p><p>')

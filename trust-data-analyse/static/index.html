@@ -826,8 +826,11 @@
         }
 
         function markdownToHtml(text) {
+            if (typeof marked !== 'undefined') {
+                return marked.parse(text, { breaks: true, gfm: true });
+            }
             let html = text;
-            // Tables
+            // Fallback in case marked library fails to load
             html = html.replace(/\n\|(.+)\|\n\|[-| :]+\|\n((?:\|.+\|\n?)+)/g, (match, header, body) => {
                 const headers = header.split('|').filter(h => h.trim());
                 const rows = body.trim().split('\n').map(row => row.split('|').filter(c => c.trim()));
@@ -842,15 +845,11 @@
                 table += '</tbody></table>';
                 return table;
             });
-            // Headers
             html = html.replace(/^### (.+)$/gm, '<h3>$1</h3>');
             html = html.replace(/^## (.+)$/gm, '<h2>$1</h2>');
-            // Bold
             html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
-            // Lists
             html = html.replace(/^- (.+)$/gm, '<li>$1</li>');
             html = html.replace(/(<li>.*<\/li>\n?)+/g, '<ul>$&</ul>');
-            // Line breaks
             html = html.replace(/\n\n/g, '<br><br>');
             html = html.replace(/\n/g, '<br>');
             return html;
@@ -1598,6 +1597,7 @@
             </div>
         </div>
     </div>
+    <script src="marked.min.js"></script>
     <script src="smart_cards.js"></script>
 </body>
 </html>
