@@ -8,3 +8,4 @@ __pycache__/
 
 # App-specific caches
 trust-data-analyse/smart_card_cache/
+spider_data/

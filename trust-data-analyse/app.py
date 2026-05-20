@@ -13,6 +13,14 @@ import matplotlib.font_manager as fm
 import numpy as np
 
 from agent import get_agent_response, get_agent_streaming_response
+import logging
+
+# 配置全局日志输出级别和格式
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s [%(levelname)s] %(name)s: %(message)s',
+    handlers=[logging.StreamHandler(sys.stdout)]
+)
 
 # 自动检测static目录
 static_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'static')

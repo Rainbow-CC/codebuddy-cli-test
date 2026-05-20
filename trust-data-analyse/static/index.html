@@ -746,6 +746,16 @@
         const sendBtn = document.getElementById('sendBtn');
         const welcome = document.getElementById('welcome');
 
+        // 获取或生成唯一的会话 ID
+        function getOrGenerateThreadId() {
+            let threadId = sessionStorage.getItem('agent_thread_id');
+            if (!threadId) {
+                threadId = 'session_' + Math.random().toString(36).substring(2, 15) + '_' + Date.now();
+                sessionStorage.setItem('agent_thread_id', threadId);
+            }
+            return threadId;
+        }
+
         // Auto-resize textarea
         queryInput.addEventListener('input', function() {
             this.style.height = 'auto';
@@ -911,7 +921,7 @@
                     const response = await fetch(endpoint, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ query, thread_id: 'user_session_001' })
+                        body: JSON.stringify({ query, thread_id: getOrGenerateThreadId() })
                     });
 
                     removeTypingIndicator();
