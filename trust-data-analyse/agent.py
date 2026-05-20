@@ -26,7 +26,7 @@ def create_survey_agent():
 
     # 2. 加载 Trust Survey SQL Expert 技能
     BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-    skill_path = os.path.join(BASE_DIR, "..", "trust-survey-sql-expert")
+    skill_path = os.path.join(BASE_DIR, "trust-survey-sql-expert")
     skill_instructions = load_skill_instructions(skill_path)
 
     system_prompt = f"""你是一个专业的信托行业调研数据分析专家。

@@ -5,7 +5,7 @@ from langchain_core.tools import tool
 # 获取数据库路径
 # 数据库位于 trust-survey-sql-expert/trust_survey.db
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-DB_PATH = os.path.join(BASE_DIR, "..", "trust-survey-sql-expert", "trust_survey.db")
+DB_PATH = os.path.join(BASE_DIR, "trust-survey-sql-expert", "trust_survey.db")
 
 @tool
 def query_survey_db(sql_query: str):
