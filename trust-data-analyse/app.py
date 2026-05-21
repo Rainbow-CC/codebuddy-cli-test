@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 import os
 import sys
+import io
+import threading
 
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 import json, re, base64
@@ -27,7 +29,23 @@ static_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'static')
 if not os.path.exists(static_dir):
     static_dir = '/workspace/static'
 app = Flask(__name__, static_folder=static_dir, static_url_path='')
-CORS(app)
+_cors_origins = [
+    origin.strip()
+    for origin in os.getenv(
+        "TRUST_DATA_CORS_ORIGINS",
+        "http://127.0.0.1:5000,http://localhost:5000"
+    ).split(",")
+    if origin.strip()
+]
+CORS(app, resources={r"/api/*": {"origins": _cors_origins}})
+_analysis_lock = threading.RLock()
+_config_lock = threading.RLock()
+
+
+def _clean_thread_id(thread_id):
+    thread_id = str(thread_id or 'user_default')
+    cleaned = re.sub(r'[^A-Za-z0-9_.:-]', '_', thread_id)[:120]
+    return cleaned or 'user_default'
 
 # agent mode
 import asyncio
@@ -37,8 +55,10 @@ from flask import Response, stream_with_context
 def chat_agent():
     """LangGraph Agent 问答接口 (阻塞式)"""
     data = request.get_json(silent=True) or {}
-    query = data.get('query', '')
-    thread_id = data.get('thread_id', 'user_default')
+    query = str(data.get('query', ''))
+    thread_id = _clean_thread_id(data.get('thread_id', 'user_default'))
+    if len(query) > 2000:
+        return jsonify({'error': '问题长度不能超过2000字符'}), 400
     
     if not query.strip():
         return jsonify({'error': '请输入问题'}), 400
@@ -54,8 +74,10 @@ def chat_agent():
 def chat_agent_stream():
     """LangGraph Agent 问答接口 (流式 SSE)"""
     data = request.get_json(silent=True) or {}
-    query = data.get('query', '')
-    thread_id = data.get('thread_id', 'user_default')
+    query = str(data.get('query', ''))
+    thread_id = _clean_thread_id(data.get('thread_id', 'user_default'))
+    if len(query) > 2000:
+        return jsonify({'error': '问题长度不能超过2000字符'}), 400
     
     if not query.strip():
         return jsonify({'error': '请输入问题'}), 400
@@ -303,11 +325,11 @@ def find_columns(query):
 
 def generate_chart(fig, chart_id):
     """Save figure to file and return base64"""
-    path = os.path.join(CHART_DIR, f'{chart_id}.png')
-    fig.savefig(path, dpi=120, bbox_inches='tight', facecolor='white')
+    buffer = io.BytesIO()
+    fig.savefig(buffer, format='png', dpi=120, bbox_inches='tight', facecolor='white')
     plt.close(fig)
-    with open(path, 'rb') as f:
-        b64 = base64.b64encode(f.read()).decode()
+    buffer.seek(0)
+    b64 = base64.b64encode(buffer.read()).decode()
     return f'data:image/png;base64,{b64}'
 
 
@@ -2764,10 +2786,13 @@ def index():
 @app.route('/api/analyze', methods=['POST'])
 def analyze():
     data = request.get_json(silent=True) or {}
-    query = data.get('query', '')
+    query = str(data.get('query', ''))
     if not query.strip():
         return jsonify({'error': '请输入问题'}), 400
-    result, charts = route_query(query)
+    if len(query) > 2000:
+        return jsonify({'error': '问题长度不能超过2000字符'}), 400
+    with _analysis_lock:
+        result, charts = route_query(query)
     return jsonify({'result': result, 'charts': charts})
 
 
@@ -2801,15 +2826,18 @@ def suggestions():
 # 使用Flask app配置存储用户自定义配置（线程安全）
 def get_user_head_benchmark():
     """获取用户自定义的头部标杆配置"""
-    return current_app.config.get('USER_HEAD_BENCHMARK', None)
+    with _config_lock:
+        return current_app.config.get('USER_HEAD_BENCHMARK', None)
 
 def set_user_head_benchmark(config):
     """设置用户自定义的头部标杆配置"""
-    current_app.config['USER_HEAD_BENCHMARK'] = config
+    with _config_lock:
+        current_app.config['USER_HEAD_BENCHMARK'] = config
 
 def clear_user_head_benchmark():
     """清除用户自定义的头部标杆配置"""
-    current_app.config['USER_HEAD_BENCHMARK'] = None
+    with _config_lock:
+        current_app.config['USER_HEAD_BENCHMARK'] = None
 
 
 @app.route('/api/head-benchmark', methods=['GET'])
@@ -2843,6 +2871,9 @@ def set_head_benchmark():
         return jsonify({'error': '缺少companies参数'}), 400
     
     selected_companies = data['companies']
+    if not isinstance(selected_companies, list):
+        return jsonify({'error': 'companies必须是数组'}), 400
+    selected_companies = [str(name).strip() for name in selected_companies if str(name).strip()]
     
     # 验证公司名是否有效
     valid_names = [c['公司简称'] for c in companies]
@@ -2894,15 +2925,18 @@ DEFAULT_DIMENSIONS = {
 # 使用Flask app配置存储用户自定义维度配置（线程安全）
 def get_user_dimensions():
     """获取用户自定义的维度配置"""
-    return current_app.config.get('USER_DIMENSIONS', None)
+    with _config_lock:
+        return current_app.config.get('USER_DIMENSIONS', None)
 
 def set_user_dimensions(config):
     """设置用户自定义的维度配置"""
-    current_app.config['USER_DIMENSIONS'] = config
+    with _config_lock:
+        current_app.config['USER_DIMENSIONS'] = config
 
 def clear_user_dimensions():
     """清除用户自定义的维度配置"""
-    current_app.config['USER_DIMENSIONS'] = None
+    with _config_lock:
+        current_app.config['USER_DIMENSIONS'] = None
 
 
 @app.route('/api/dimensions', methods=['GET'])
@@ -2932,6 +2966,29 @@ def set_dimensions():
         return jsonify({'error': '缺少dimensions参数'}), 400
     
     dimensions = data['dimensions']
+    if not isinstance(dimensions, dict):
+        return jsonify({'error': 'dimensions必须是对象'}), 400
+    allowed_keys = set(DEFAULT_DIMENSIONS.keys())
+    if set(dimensions.keys()) - allowed_keys:
+        return jsonify({'error': '包含未知维度'}), 400
+    normalized_dimensions = {}
+    for dim_key, default_dim in DEFAULT_DIMENSIONS.items():
+        dim = dimensions.get(dim_key, default_dim)
+        if not isinstance(dim, dict):
+            return jsonify({'error': f'{dim_key}配置无效'}), 400
+        try:
+            weight = float(dim.get('weight', default_dim['weight']))
+        except (TypeError, ValueError):
+            return jsonify({'error': f'{dim_key}权重必须是数字'}), 400
+        if not 0 <= weight <= 1:
+            return jsonify({'error': f'{dim_key}权重必须在0到1之间'}), 400
+        normalized_dimensions[dim_key] = {
+            'name': default_dim['name'],
+            'weight': weight,
+            'enabled': bool(dim.get('enabled', default_dim['enabled'])),
+            'is_reference': bool(default_dim.get('is_reference', False)),
+        }
+    dimensions = normalized_dimensions
     
     # 验证维度配置
     enabled_dims = [d for d in dimensions.values() if d.get('enabled', False) and not d.get('is_reference', False)]
@@ -3211,4 +3268,4 @@ register_smart_cards_blueprint(app)
 
 if __name__ == '__main__':
     os.makedirs('/data/user/work/static', exist_ok=True)
-    app.run(host='0.0.0.0', port=5000, debug=False)
+    app.run(host=os.getenv('TRUST_DATA_HOST', '127.0.0.1'), port=5000, debug=False)

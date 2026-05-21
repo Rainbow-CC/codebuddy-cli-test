@@ -222,7 +222,7 @@ function displaySmartAnalysis(data, isQuickQuestion = false) {
     let resultHtml = `
         <div class="smart-analysis-header">
             <div class="smart-analysis-title">
-                <span class="smart-analysis-icon">${icon}</span>
+                <span class="smart-analysis-icon">${escapeHtml(icon)}</span>
                 <span>${escapeHtml(title)}</span>
                 ${data.isCached ? '<span class="cache-badge">已缓存</span>' : '<span class="fresh-badge">实时生成</span>'}
             </div>
@@ -247,15 +247,17 @@ function displaySmartAnalysis(data, isQuickQuestion = false) {
 // 格式化分析结果
 function formatAnalysisResult(result) {
     if (typeof marked !== 'undefined') {
-        return marked.parse(result, { breaks: true, gfm: true });
+        const rendered = marked.parse(result, { breaks: true, gfm: true });
+        return typeof sanitizeHtml === 'function' ? sanitizeHtml(rendered) : rendered;
     }
     // 将Markdown风格的格式转换为HTML (备用方案)
-    let formatted = result
+    let formatted = escapeHtml(result)
         .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
         .replace(/\n\n/g, '</p><p>')
         .replace(/\n/g, '<br>');
 
-    return `<p>${formatted}</p>`;
+    const html = `<p>${formatted}</p>`;
+    return typeof sanitizeHtml === 'function' ? sanitizeHtml(html) : html;
 }
 
 // 显示加载指示器
@@ -268,7 +270,7 @@ function showTypingIndicator(message = 'AI正在思考...') {
     div.innerHTML = `
         <div class="avatar">🤖</div>
         <div class="bubble">
-            <div class="typing-message">${message}</div>
+            <div class="typing-message">${escapeHtml(message)}</div>
             <div class="typing-indicator">
                 <span></span><span></span><span></span>
             </div>
@@ -308,7 +310,7 @@ function createSmartAnalysisPlaceholder(item, isQuickQuestion = false) {
         <div class="bubble">
             <div class="smart-analysis-header">
                 <div class="smart-analysis-title">
-                    <span class="smart-analysis-icon">${icon}</span>
+                    <span class="smart-analysis-icon">${escapeHtml(icon)}</span>
                     <span>${escapeHtml(title)}</span>
                     <span class="badge-placeholder"></span>
                 </div>
@@ -504,11 +506,19 @@ function updateQuickQuestionsList() {
     if (!container) return;
 
     const questions = smartCardManager.quickQuestions;
-    container.innerHTML = questions.slice(0, 8).map(q =>
-        `<div class="suggestion-item" onclick="askQuickQuestion('${q.id}', '${escapeHtml(q.text)}')">
-            <span class="icon">${q.icon}</span> ${escapeHtml(q.text)}
-        </div>`
-    ).join('');
+    container.innerHTML = '';
+    questions.slice(0, 8).forEach(q => {
+        const item = document.createElement('div');
+        item.className = 'suggestion-item';
+        item.onclick = () => askQuickQuestion(q.id, q.text);
+
+        const icon = document.createElement('span');
+        icon.className = 'icon';
+        icon.textContent = q.icon || '';
+        item.appendChild(icon);
+        item.appendChild(document.createTextNode(` ${q.text || ''}`));
+        container.appendChild(item);
+    });
 }
 
 // 更新卡片点击处理器

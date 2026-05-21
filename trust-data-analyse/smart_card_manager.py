@@ -7,6 +7,9 @@ import json
 import os
 import hashlib
 import sqlite3
+import tempfile
+import threading
+from copy import deepcopy
 from datetime import datetime
 from pathlib import Path
 from typing import Dict, List, Optional, Any
@@ -158,13 +161,16 @@ class SmartCardManager:
             "custom_cards": [],
             "quick_questions": []
         }
+        self._lock = threading.RLock()
         self._init_db()
         self._load_cards_config()
     
     def _init_db(self):
         """初始化 SQLite 缓存表"""
         try:
-            with sqlite3.connect(self.db_path) as conn:
+            with sqlite3.connect(self.db_path, timeout=10) as conn:
+                conn.execute("PRAGMA journal_mode=WAL")
+                conn.execute("PRAGMA busy_timeout=10000")
                 cursor = conn.cursor()
                 cursor.execute("""
                     CREATE TABLE IF NOT EXISTS smart_card_cache (
@@ -182,16 +188,17 @@ class SmartCardManager:
     
     def _load_cards_config(self):
         """加载卡片配置"""
-        if CARDS_CONFIG_FILE.exists():
-            try:
-                with open(CARDS_CONFIG_FILE, 'r', encoding='utf-8') as f:
-                    self.cards_config = json.load(f)
-                self._merge_default_config()
-            except Exception as e:
-                print(f"加载卡片配置失败: {e}")
+        with self._lock:
+            if CARDS_CONFIG_FILE.exists():
+                try:
+                    with open(CARDS_CONFIG_FILE, 'r', encoding='utf-8') as f:
+                        self.cards_config = json.load(f)
+                    self._merge_default_config()
+                except Exception as e:
+                    print(f"加载卡片配置失败: {e}")
+                    self._init_default_config()
+            else:
                 self._init_default_config()
-        else:
-            self._init_default_config()
 
     def _merge_default_config(self):
         """补齐新增的默认卡片和快捷提问，保留用户自定义配置。"""
@@ -232,9 +239,19 @@ class SmartCardManager:
     def _save_cards_config(self):
         """保存卡片配置"""
         try:
-            self.cards_config["last_updated"] = datetime.now().isoformat()
-            with open(CARDS_CONFIG_FILE, 'w', encoding='utf-8') as f:
-                json.dump(self.cards_config, f, ensure_ascii=False, indent=2)
+            with self._lock:
+                self.cards_config["last_updated"] = datetime.now().isoformat()
+                fd, tmp_path = tempfile.mkstemp(
+                    prefix=CARDS_CONFIG_FILE.name,
+                    suffix=".tmp",
+                    dir=str(CACHE_DIR),
+                    text=True
+                )
+                with os.fdopen(fd, 'w', encoding='utf-8') as f:
+                    json.dump(self.cards_config, f, ensure_ascii=False, indent=2)
+                    f.flush()
+                    os.fsync(f.fileno())
+                os.replace(tmp_path, CARDS_CONFIG_FILE)
         except Exception as e:
             print(f"保存卡片配置失败: {e}")
     
@@ -247,83 +264,122 @@ class SmartCardManager:
     
     def get_all_cards(self) -> List[Dict]:
         """获取所有卡片（预制+自定义）"""
-        return self.cards_config.get("preset_cards", []) + self.cards_config.get("custom_cards", [])
+        with self._lock:
+            return deepcopy(self.cards_config.get("preset_cards", []) + self.cards_config.get("custom_cards", []))
     
     def get_preset_cards(self) -> List[Dict]:
         """获取预制卡片"""
-        return self.cards_config.get("preset_cards", [])
+        with self._lock:
+            return deepcopy(self.cards_config.get("preset_cards", []))
     
     def get_custom_cards(self) -> List[Dict]:
         """获取自定义卡片"""
-        return self.cards_config.get("custom_cards", [])
+        with self._lock:
+            return deepcopy(self.cards_config.get("custom_cards", []))
     
     def get_quick_questions(self) -> List[Dict]:
         """获取快捷提问列表"""
-        return self.cards_config.get("quick_questions", [])
+        with self._lock:
+            return deepcopy(self.cards_config.get("quick_questions", []))
     
     def add_custom_card(self, title: str, query: str, description: str = "", 
                        icon: str = "📋", tags: List[str] = None) -> Dict:
         """添加自定义卡片"""
-        card_id = f"custom_{hashlib.md5(title.encode()).hexdigest()[:8]}"
-        card = {
-            "id": card_id,
-            "title": title,
-            "icon": icon,
-            "query": query,
-            "description": description,
-            "tags": tags or [],
-            "category": "custom",
-            "created_at": datetime.now().isoformat()
-        }
-        self.cards_config["custom_cards"].append(card)
-        self._save_cards_config()
-        return card
+        with self._lock:
+            title = str(title)[:120]
+            query = str(query)[:2000]
+            description = str(description)[:500]
+            icon = str(icon)[:16]
+            tags = [str(tag)[:40] for tag in (tags or [])[:10]] if isinstance(tags, list) else []
+            base_id = hashlib.sha256(f"{title}:{query}".encode()).hexdigest()[:10]
+            card_id = f"custom_{base_id}"
+            existing_ids = {card.get("id") for card in self.cards_config.get("custom_cards", [])}
+            suffix = 1
+            while card_id in existing_ids:
+                suffix += 1
+                card_id = f"custom_{base_id}_{suffix}"
+            card = {
+                "id": card_id,
+                "title": title,
+                "icon": icon,
+                "query": query,
+                "description": description,
+                "tags": tags,
+                "category": "custom",
+                "created_at": datetime.now().isoformat()
+            }
+            self.cards_config["custom_cards"].append(card)
+            self._save_cards_config()
+            return deepcopy(card)
     
     def update_custom_card(self, card_id: str, **kwargs) -> Optional[Dict]:
         """更新自定义卡片"""
-        for card in self.cards_config["custom_cards"]:
-            if card["id"] == card_id:
-                card.update(kwargs)
-                card["updated_at"] = datetime.now().isoformat()
-                self._save_cards_config()
-                return card
+        allowed_fields = {"title", "query", "description", "icon", "tags"}
+        updates = {key: value for key, value in kwargs.items() if key in allowed_fields}
+        if "tags" in updates and not isinstance(updates["tags"], list):
+            updates["tags"] = []
+        if "tags" in updates:
+            updates["tags"] = [str(tag)[:40] for tag in updates["tags"][:10]]
+        for field in ("title", "query", "description", "icon"):
+            if field in updates:
+                max_len = {"title": 120, "query": 2000, "description": 500, "icon": 16}[field]
+                updates[field] = str(updates[field])[:max_len]
+        with self._lock:
+            for card in self.cards_config["custom_cards"]:
+                if card["id"] == card_id:
+                    card.update(updates)
+                    card["updated_at"] = datetime.now().isoformat()
+                    self._save_cards_config()
+                    return deepcopy(card)
         return None
     
     def delete_custom_card(self, card_id: str) -> bool:
         """删除自定义卡片"""
-        original_len = len(self.cards_config["custom_cards"])
-        self.cards_config["custom_cards"] = [
-            c for c in self.cards_config["custom_cards"] if c["id"] != card_id
-        ]
-        if len(self.cards_config["custom_cards"]) < original_len:
-            self._save_cards_config()
-            # 同时清除相关缓存
-            self.clear_card_cache(card_id)
-            return True
+        with self._lock:
+            original_len = len(self.cards_config["custom_cards"])
+            self.cards_config["custom_cards"] = [
+                c for c in self.cards_config["custom_cards"] if c["id"] != card_id
+            ]
+            if len(self.cards_config["custom_cards"]) < original_len:
+                self._save_cards_config()
+                # 同时清除相关缓存
+                self.clear_card_cache(card_id)
+                return True
         return False
     
     def add_quick_question(self, text: str, icon: str = "💬") -> Dict:
         """添加快捷提问"""
-        question_id = f"qq_{hashlib.md5(text.encode()).hexdigest()[:8]}"
-        question = {
-            "id": question_id,
-            "text": text,
-            "icon": icon,
-            "created_at": datetime.now().isoformat()
-        }
-        self.cards_config["quick_questions"].append(question)
-        self._save_cards_config()
-        return question
+        with self._lock:
+            text = str(text)[:500]
+            icon = str(icon)[:16]
+            base_id = hashlib.sha256(text.encode()).hexdigest()[:10]
+            question_id = f"qq_{base_id}"
+            existing_ids = {question.get("id") for question in self.cards_config.get("quick_questions", [])}
+            suffix = 1
+            while question_id in existing_ids:
+                suffix += 1
+                question_id = f"qq_{base_id}_{suffix}"
+            question = {
+                "id": question_id,
+                "text": text,
+                "icon": icon,
+                "created_at": datetime.now().isoformat()
+            }
+            self.cards_config["quick_questions"].append(question)
+            self._save_cards_config()
+            return deepcopy(question)
     
     def delete_quick_question(self, question_id: str) -> bool:
         """删除快捷提问"""
-        original_len = len(self.cards_config["quick_questions"])
-        self.cards_config["quick_questions"] = [
-            q for q in self.cards_config["quick_questions"] if q["id"] != question_id
-        ]
-        if len(self.cards_config["quick_questions"]) < original_len:
-            self._save_cards_config()
-            return True
+        with self._lock:
+            original_len = len(self.cards_config["quick_questions"])
+            self.cards_config["quick_questions"] = [
+                q for q in self.cards_config["quick_questions"] if q["id"] != question_id
+            ]
+            if len(self.cards_config["quick_questions"]) < original_len:
+                self._save_cards_config()
+                self.clear_card_cache(question_id)
+                return True
         return False
     
     # ========== 缓存响应管理 ==========
@@ -332,7 +388,8 @@ class SmartCardManager:
         """从 SQLite 数据库获取缓存的响应"""
         cache_key = self._generate_cache_key(query, card_id)
         try:
-            with sqlite3.connect(self.db_path) as conn:
+            with sqlite3.connect(self.db_path, timeout=10) as conn:
+                conn.execute("PRAGMA busy_timeout=10000")
                 cursor = conn.cursor()
                 cursor.execute(
                     "SELECT result, charts, cached_at FROM smart_card_cache WHERE cache_key = ?",
@@ -362,7 +419,8 @@ class SmartCardManager:
         charts_str = json.dumps(charts or [])
         cached_at = datetime.now().isoformat()
         try:
-            with sqlite3.connect(self.db_path) as conn:
+            with sqlite3.connect(self.db_path, timeout=10) as conn:
+                conn.execute("PRAGMA busy_timeout=10000")
                 cursor = conn.cursor()
                 cursor.execute(
                     """
@@ -379,7 +437,8 @@ class SmartCardManager:
     def clear_card_cache(self, card_id: str):
         """从 SQLite 中清除特定卡片的缓存"""
         try:
-            with sqlite3.connect(self.db_path) as conn:
+            with sqlite3.connect(self.db_path, timeout=10) as conn:
+                conn.execute("PRAGMA busy_timeout=10000")
                 cursor = conn.cursor()
                 cursor.execute("DELETE FROM smart_card_cache WHERE card_id = ?", (card_id,))
                 conn.commit()
@@ -389,7 +448,8 @@ class SmartCardManager:
     def clear_all_cache(self):
         """清空 SQLite 缓存表"""
         try:
-            with sqlite3.connect(self.db_path) as conn:
+            with sqlite3.connect(self.db_path, timeout=10) as conn:
+                conn.execute("PRAGMA busy_timeout=10000")
                 cursor = conn.cursor()
                 cursor.execute("DELETE FROM smart_card_cache")
                 conn.commit()
@@ -402,7 +462,8 @@ class SmartCardManager:
         preset_cached = 0
         custom_cached = 0
         try:
-            with sqlite3.connect(self.db_path) as conn:
+            with sqlite3.connect(self.db_path, timeout=10) as conn:
+                conn.execute("PRAGMA busy_timeout=10000")
                 cursor = conn.cursor()
                 
                 # 统计总数
@@ -427,9 +488,9 @@ class SmartCardManager:
             "total_cached": total,
             "preset_cached": preset_cached,
             "custom_cached": custom_cached,
-            "preset_cards_count": len(self.cards_config.get("preset_cards", [])),
-            "custom_cards_count": len(self.cards_config.get("custom_cards", [])),
-            "quick_questions_count": len(self.cards_config.get("quick_questions", []))
+            "preset_cards_count": len(self.get_preset_cards()),
+            "custom_cards_count": len(self.get_custom_cards()),
+            "quick_questions_count": len(self.get_quick_questions())
         }
     
     def regenerate_card_response(self, card_id: str, agent_func) -> Optional[Dict]:

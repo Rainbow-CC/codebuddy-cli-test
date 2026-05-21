@@ -1,4 +1,5 @@
 import os
+import threading
 from langchain_openai import ChatOpenAI
 from langchain.agents import create_agent
 from langchain_core.messages import HumanMessage
@@ -54,42 +55,51 @@ def create_survey_agent():
 
 # 单例模式或全局变量
 _agent = None
+_agent_init_lock = threading.Lock()
+_agent_invoke_lock = threading.RLock()
 
-async def get_agent_response(query: str, thread_id: str = "default_user"):
+
+def _get_agent():
     global _agent
     if _agent is None:
-        _agent = create_survey_agent()
+        with _agent_init_lock:
+            if _agent is None:
+                _agent = create_survey_agent()
+    return _agent
+
+async def get_agent_response(query: str, thread_id: str = "default_user"):
+    agent = _get_agent()
     
     config = {"configurable": {"thread_id": thread_id}}
     input_data = {"messages": [HumanMessage(content=query)]}
     
     response_content = ""
-    async for event in _agent.astream(input_data, config, stream_mode="values"):
-        last_msg = event["messages"][-1]
-        
-        # 过滤掉用户自己的消息，并获取 AI 的最后一条文本回复
-        if hasattr(last_msg, "content") and last_msg.content and last_msg.type == "ai":
-            response_content = last_msg.content
-            
+    with _agent_invoke_lock:
+        async for event in agent.astream(input_data, config, stream_mode="values"):
+            last_msg = event["messages"][-1]
+
+            # 过滤掉用户自己的消息，并获取 AI 的最后一条文本回复
+            if hasattr(last_msg, "content") and last_msg.content and last_msg.type == "ai":
+                response_content = last_msg.content
+
     return response_content
 
 async def get_agent_streaming_response(query: str, thread_id: str = "default_user"):
     """
     流式获取 Agent 响应
     """
-    global _agent
-    if _agent is None:
-        _agent = create_survey_agent()
+    agent = _get_agent()
     
     config = {"configurable": {"thread_id": thread_id}}
     input_data = {"messages": [HumanMessage(content=query)]}
     
     # 使用 astream_events 获取更细粒度的流式事件
-    async for event in _agent.astream_events(input_data, config, version="v2"):
-        kind = event["event"]
-        
-        # 捕获聊天模型输出的 token
-        if kind == "on_chat_model_stream":
-            content = event["data"]["chunk"].content
-            if content:
-                yield content
+    with _agent_invoke_lock:
+        async for event in agent.astream_events(input_data, config, version="v2"):
+            kind = event["event"]
+
+            # 捕获聊天模型输出的 token
+            if kind == "on_chat_model_stream":
+                content = event["data"]["chunk"].content
+                if content:
+                    yield content

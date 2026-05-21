@@ -6,6 +6,7 @@
 from flask import Blueprint, request, jsonify, Response, stream_with_context
 import asyncio
 import json
+import re
 
 # 导入智能卡片管理器
 from smart_card_manager import get_card_manager
@@ -18,6 +19,17 @@ card_manager = get_card_manager()
 
 # 导入Agent响应函数（需要在主app中定义）
 from agent import get_agent_response, get_agent_streaming_response
+
+SAFE_ID_PATTERN = re.compile(r'^[A-Za-z0-9_-]{1,80}$')
+
+
+def _is_safe_id(value):
+    return bool(SAFE_ID_PATTERN.fullmatch(str(value or "")))
+
+
+def _validate_text(value, max_len):
+    value = str(value or "").strip()
+    return value[:max_len]
 
 
 # ========== 卡片配置API ==========
@@ -48,11 +60,13 @@ def get_custom_cards():
 def add_custom_card():
     """添加自定义卡片"""
     data = request.get_json(silent=True) or {}
-    title = data.get('title', '').strip()
-    query = data.get('query', '').strip()
-    description = data.get('description', '')
-    icon = data.get('icon', '📋')
+    title = _validate_text(data.get('title', ''), 120)
+    query = _validate_text(data.get('query', ''), 2000)
+    description = _validate_text(data.get('description', ''), 500)
+    icon = _validate_text(data.get('icon', '📋'), 16)
     tags = data.get('tags', [])
+    if tags is not None and not isinstance(tags, list):
+        return jsonify({'error': 'tags必须是数组'}), 400
     
     if not title or not query:
         return jsonify({'error': '标题和查询内容不能为空'}), 400
@@ -70,6 +84,8 @@ def add_custom_card():
 @smart_cards_bp.route('/cards/custom/<card_id>', methods=['PUT'])
 def update_custom_card(card_id):
     """更新自定义卡片"""
+    if not _is_safe_id(card_id):
+        return jsonify({'error': '卡片ID无效'}), 400
     data = request.get_json(silent=True) or {}
     card = card_manager.update_custom_card(card_id, **data)
     if card:
@@ -80,6 +96,8 @@ def update_custom_card(card_id):
 @smart_cards_bp.route('/cards/custom/<card_id>', methods=['DELETE'])
 def delete_custom_card(card_id):
     """删除自定义卡片"""
+    if not _is_safe_id(card_id):
+        return jsonify({'error': '卡片ID无效'}), 400
     if card_manager.delete_custom_card(card_id):
         return jsonify({'success': True})
     return jsonify({'error': '卡片不存在'}), 404
@@ -97,8 +115,8 @@ def get_quick_questions():
 def add_quick_question():
     """添加快捷提问"""
     data = request.get_json(silent=True) or {}
-    text = data.get('text', '').strip()
-    icon = data.get('icon', '💬')
+    text = _validate_text(data.get('text', ''), 500)
+    icon = _validate_text(data.get('icon', '💬'), 16)
     
     if not text:
         return jsonify({'error': '问题内容不能为空'}), 400
@@ -110,6 +128,8 @@ def add_quick_question():
 @smart_cards_bp.route('/quick-questions/<question_id>', methods=['DELETE'])
 def delete_quick_question(question_id):
     """删除快捷提问"""
+    if not _is_safe_id(question_id):
+        return jsonify({'error': '问题ID无效'}), 400
     if card_manager.delete_quick_question(question_id):
         return jsonify({'success': True})
     return jsonify({'error': '问题不存在'}), 404
@@ -123,6 +143,8 @@ def analyze_card(card_id):
     分析卡片内容
     如果缓存存在则返回缓存，否则调用Agent生成
     """
+    if not _is_safe_id(card_id):
+        return jsonify({'error': '卡片ID无效'}), 400
     # 查找卡片
     card = None
     for c in card_manager.get_all_cards():
@@ -183,6 +205,8 @@ def analyze_card_stream(card_id):
     流式分析卡片内容 (SSE)
     如果缓存存在则直接流式返回完整缓存，否则实时生成并流式返回且写入缓存
     """
+    if not _is_safe_id(card_id):
+        return jsonify({'error': '卡片ID无效'}), 400
     # 查找卡片
     card = None
     for c in card_manager.get_all_cards():
@@ -243,6 +267,8 @@ def analyze_card_stream(card_id):
 @smart_cards_bp.route('/cards/<card_id>/regenerate', methods=['POST'])
 def regenerate_card(card_id):
     """重新生成卡片分析（强制刷新缓存）"""
+    if not _is_safe_id(card_id):
+        return jsonify({'error': '卡片ID无效'}), 400
     def agent_func(query):
         return get_agent_response(query, f"card_{card_id}_regen")
     
@@ -266,6 +292,8 @@ def regenerate_card(card_id):
 @smart_cards_bp.route('/quick-questions/<question_id>/analyze', methods=['POST'])
 def analyze_quick_question(question_id):
     """分析快捷提问"""
+    if not _is_safe_id(question_id):
+        return jsonify({'error': '问题ID无效'}), 400
     # 查找问题
     question = None
     for q in card_manager.get_quick_questions():
@@ -319,6 +347,8 @@ def analyze_quick_question_stream(question_id):
     流式分析快捷提问 (SSE)
     如果缓存存在则直接流式返回完整缓存，否则实时生成并流式返回且写入缓存
     """
+    if not _is_safe_id(question_id):
+        return jsonify({'error': '问题ID无效'}), 400
     # 查找问题
     question = None
     for q in card_manager.get_quick_questions():
@@ -386,6 +416,8 @@ def clear_cache():
     card_id = data.get('card_id')
     
     if card_id:
+        if not _is_safe_id(card_id):
+            return jsonify({'error': '卡片ID无效'}), 400
         card_manager.clear_card_cache(card_id)
         return jsonify({'success': True, 'message': f'已清除卡片 {card_id} 的缓存'})
     else:
