@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>信托行业科技建设数据分析智能体</title>
+    <link rel="stylesheet" href="smart_cards.css">
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         :root {
@@ -473,6 +474,39 @@
             margin-bottom: 2px;
             font-weight: 600;
         }
+            /* 数字概览大屏样式 */
+        .dashboard-card {
+            background: linear-gradient(135deg, #1a237e 0%, #283593 50%, #1565c0 100%);
+            color: white;
+            padding: 16px;
+        }
+        .dashboard-card h3 {
+            color: white;
+            font-size: 14px;
+            margin-bottom: 12px;
+            text-align: center;
+            border-bottom: 1px solid rgba(255,255,255,0.2);
+            padding-bottom: 8px;
+        }
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+        }
+        .dashboard-item {
+            background: rgba(255,255,255,0.1);
+            border-radius: 8px;
+            padding: 12px 8px;
+            text-align: center;
+            transition: all 0.3s ease;
+        }
+        .dashboard-item:hover {
+            background: rgba(255,255,255,0.2);
+            transform: translateY(-2px);
+        }
+        .dashboard-icon { font-size: 20px; margin-bottom: 4px; }
+        .dashboard-value { font-size: 22px; font-weight: 700; color: #fff; margin-bottom: 2px; }
+        .dashboard-label { font-size: 11px; color: rgba(255,255,255,0.8); }
     </style>
 </head>
 <body>
@@ -480,58 +514,67 @@
         <div class="header-icon">📊</div>
         <div>
             <h1>信托行业科技建设数据分析智能体</h1>
-            <div class="subtitle">基于65家信托公司科技能力调研数据 · 智能问答分析</div>
+            <div class="subtitle">基于61家信托公司科技能力调研数据 · 智能问答分析</div>
         </div>
         <a href="/" class="home-btn" onclick="returnToHome(event)">🏠 返回首页</a>
     </div>
 
     <div class="main">
-        <div class="sidebar">
-            <div class="sidebar-card">
-                <h3>📋 数据概览</h3>
-                <div class="stats-bar">
-                    <div class="stat-item">
-                        <div class="stat-value">65</div>
-                        <div class="stat-label">信托公司</div>
-                    </div>
-                    <div class="stat-item">
-                        <div class="stat-value">256</div>
-                        <div class="stat-label">数据字段</div>
-                    </div>
-                    <div class="stat-item">
-                        <div class="stat-value">10</div>
-                        <div class="stat-label">调研维度</div>
-                    </div>
-                </div>
-            </div>
-            <div class="sidebar-card">
-                <h3>⚙️ 头部标杆设置</h3>
-                <p style="font-size:12px;color:var(--text-secondary);margin-bottom:10px;">自定义综合排名的头部标杆公司</p>
-                <button onclick="openHeadBenchmarkModal()" style="width:100%;padding:10px;background:var(--primary);color:white;border:none;border-radius:8px;cursor:pointer;font-size:13px;">
-                    🏆 配置头部标杆
-                </button>
-                <div id="currentHeadBenchmark" style="margin-top:10px;font-size:11px;color:var(--text-secondary);">
-                    当前：系统默认
-                </div>
-            </div>
-
-            <div class="sidebar-card">
-                <h3>📊 维度与权重设置</h3>
-                <p style="font-size:12px;color:var(--text-secondary);margin-bottom:10px;">自定义排名维度和权重</p>
-                <button onclick="openDimensionsModal()" style="width:100%;padding:10px;background:#28a745;color:white;border:none;border-radius:8px;cursor:pointer;font-size:13px;">
-                    ⚖️ 配置维度权重
-                </button>
-                <div id="currentDimensions" style="margin-top:10px;font-size:11px;color:var(--text-secondary);">
-                    当前：8维度默认权重
-                </div>
-            </div>
-
+                <div class="sidebar">
+            <!-- 原始数据查看卡片 - 放在左上角 -->
             <div class="sidebar-card">
                 <h3>📋 原始数据查看</h3>
                 <p style="font-size:12px;color:var(--text-secondary);margin-bottom:10px;">查看所有分析依据的原始表格数据</p>
                 <button onclick="openRawDataModal()" style="width:100%;padding:10px;background:#6c757d;color:white;border:none;border-radius:8px;cursor:pointer;font-size:13px;">
                     📊 查看原始数据
                 </button>
+            </div>
+
+            <!-- 数字概览大屏 -->
+            <div class="sidebar-card dashboard-card">
+                <h3>📊 底层问卷数据统计概览</h3>
+                <div class="dashboard-grid">
+                    <div class="dashboard-item">
+                        <div class="dashboard-icon">🏢</div>
+                        <div class="dashboard-value" id="statCompanies">61</div>
+                        <div class="dashboard-label">信托公司</div>
+                    </div>
+                    <div class="dashboard-item">
+                        <div class="dashboard-icon">📝</div>
+                        <div class="dashboard-value" id="statFields">256</div>
+                        <div class="dashboard-label">数据字段</div>
+                    </div>
+                    <div class="dashboard-item">
+                        <div class="dashboard-icon">📊</div>
+                        <div class="dashboard-value" id="statDimensions">10</div>
+                        <div class="dashboard-label">调研维度</div>
+                    </div>
+                    <div class="dashboard-item">
+                        <div class="dashboard-icon">💰</div>
+                        <div class="dashboard-value" id="statAvgInvest">-</div>
+                        <div class="dashboard-label">平均科技投入(万元)</div>
+                    </div>
+                    <div class="dashboard-item">
+                        <div class="dashboard-icon">👥</div>
+                        <div class="dashboard-value" id="statAvgTech">-</div>
+                        <div class="dashboard-label">平均科技人员</div>
+                    </div>
+                    <div class="dashboard-item">
+                        <div class="dashboard-icon">🏆</div>
+                        <div class="dashboard-value" id="statCIO">-</div>
+                        <div class="dashboard-label">设立CIO公司数</div>
+                    </div>
+                    <div class="dashboard-item">
+                        <div class="dashboard-icon">🤖</div>
+                        <div class="dashboard-value" id="statAI">-</div>
+                        <div class="dashboard-label">应用AI公司数</div>
+                    </div>
+                    <div class="dashboard-item">
+                        <div class="dashboard-icon">🖥️</div>
+                        <div class="dashboard-value" id="statXinchuang">-</div>
+                        <div class="dashboard-label">启动信创公司数</div>
+                    </div>
+                </div>
             </div>
 
             <div class="sidebar-card">
@@ -591,7 +634,7 @@
                 <div class="welcome" id="welcome">
                     <div class="logo">🤖</div>
                     <h2>信托行业科技建设数据分析智能体</h2>
-                    <p>基于65家信托公司、256个数据字段的科技能力调研数据，支持多维度智能分析。点击下方卡片即可开始探索。</p>
+                    <p>基于61家信托公司、256个数据字段的科技能力调研数据，支持多维度智能分析。点击下方卡片即可开始探索。</p>
                     <div class="welcome-chips">
                         <div class="welcome-chip" onclick="askQuestion('头部标杆分析')">🏆 头部标杆</div>
                         <div class="welcome-chip" onclick="askQuestion('综合排名TOP10')">📊 综合排名</div>
@@ -603,7 +646,7 @@
                 <div class="catalog-section" id="catalogSection">
                     <div class="catalog-title">📋 调研板块总览（10大维度 · 点击卡片直接提问）</div>
                     <div class="catalog-grid">
-                        <div class="catalog-card" onclick="askQuestion('行业整体科技建设情况概览')">
+                        <div class="catalog-card" data-card-id="industry_overview" onclick="askQuestion('行业整体科技建设情况概览')">
                             <div class="card-icon">📊</div>
                             <div class="card-title">行业概览</div>
                             <div class="card-desc">科技投入趋势、人员占比、CIO设立等核心指标汇总</div>
@@ -612,7 +655,7 @@
                                 <span class="card-q">整体情况</span>
                             </div>
                         </div>
-                        <div class="catalog-card" onclick="askQuestion('科技投入分析')">
+                        <div class="catalog-card" data-card-id="tech_strategy" onclick="askQuestion('科技战略定位分析')">
                             <div class="card-icon">💰</div>
                             <div class="card-title">科技战略定位</div>
                             <div class="card-desc">金融科技战略、数字化转型战略、数据治理战略等6项规划发布情况</div>
@@ -621,7 +664,7 @@
                                 <span class="card-q">数字化转型</span>
                             </div>
                         </div>
-                        <div class="catalog-card" onclick="askQuestion('科技投入分析')">
+                        <div class="catalog-card" data-card-id="resource_investment" onclick="askQuestion('科技投入分析')">
                             <div class="card-icon">💵</div>
                             <div class="card-title">资源投入与配置</div>
                             <div class="card-desc">2023-2026年科技投入、人员配置、科技团队/外包团队规模</div>
@@ -631,7 +674,7 @@
                                 <span class="card-q">外包团队</span>
                             </div>
                         </div>
-                        <div class="catalog-card" onclick="askQuestion('组织架构与治理分析')">
+                        <div class="catalog-card" data-card-id="organization" onclick="askQuestion('组织架构与治理分析')">
                             <div class="card-icon">🏢</div>
                             <div class="card-title">组织架构与人才培养</div>
                             <div class="card-desc">治理机构设立、科技部门设置、CIO配置、认证资质、人才流动</div>
@@ -641,7 +684,7 @@
                                 <span class="card-q">认证资质</span>
                             </div>
                         </div>
-                        <div class="catalog-card" onclick="askQuestion('基础设施架构模式分布')">
+                        <div class="catalog-card" data-card-id="infrastructure" onclick="askQuestion('基础设施架构模式分布')">
                             <div class="card-icon">🏗️</div>
                             <div class="card-title">基础设施架构</div>
                             <div class="card-desc">机房架构模式、服务器虚拟化、桌面虚拟化、公有云平台使用</div>
@@ -651,7 +694,7 @@
                                 <span class="card-q">虚拟化</span>
                             </div>
                         </div>
-                        <div class="catalog-card" onclick="askQuestion('信创转型进展')">
+                        <div class="catalog-card" data-card-id="xinchuang" onclick="askQuestion('信创转型进展')">
                             <div class="card-icon">🖥️</div>
                             <div class="card-title">信创转型与进展</div>
                             <div class="card-desc">信创进展阶段、信创系统占比、芯片/服务器/操作系统/数据库/中间件品牌选择</div>
@@ -660,7 +703,7 @@
                                 <span class="card-q">品牌选择</span>
                             </div>
                         </div>
-                        <div class="catalog-card" onclick="askQuestion('人工智能应用情况')">
+                        <div class="catalog-card" data-card-id="high_tech" onclick="askQuestion('人工智能应用情况')">
                             <div class="card-icon">🤖</div>
                             <div class="card-title">高新技术应用</div>
                             <div class="card-desc">人工智能、大数据、云原生、区块链四大技术的应用场景与阶段</div>
@@ -671,7 +714,7 @@
                                 <span class="card-q">区块链</span>
                             </div>
                         </div>
-                        <div class="catalog-card" onclick="askQuestion('业务系统部署情况')">
+                        <div class="catalog-card" data-card-id="business_systems" onclick="askQuestion('业务系统部署情况')">
                             <div class="card-icon">💻</div>
                             <div class="card-title">业务应用系统建设</div>
                             <div class="card-desc">27类业务系统部署覆盖率、自研/合作/外采比例、未来3-5年投入方向</div>
@@ -680,7 +723,7 @@
                                 <span class="card-q">未来方向</span>
                             </div>
                         </div>
-                        <div class="catalog-card" onclick="askQuestion('数字化渠道覆盖情况')">
+                        <div class="catalog-card" data-card-id="digital_channels" onclick="askQuestion('数字化渠道覆盖情况')">
                             <div class="card-icon">📱</div>
                             <div class="card-title">数字化客户服务渠道</div>
                             <div class="card-desc">APP/小程序/网站等渠道覆盖、远程面签/智能客服/电子合同等功能</div>
@@ -690,7 +733,7 @@
                                 <span class="card-q">智能客服</span>
                             </div>
                         </div>
-                        <div class="catalog-card" onclick="askQuestion('数据治理现状分析')">
+                        <div class="catalog-card" data-card-id="data_governance" onclick="askQuestion('数据治理现状分析')">
                             <div class="card-icon">🗄️</div>
                             <div class="card-title">数据治理与安全</div>
                             <div class="card-desc">数据中台建设、数据质量管理、分类分级、数据安全/DLP管控</div>
@@ -700,7 +743,7 @@
                                 <span class="card-q">数据中台</span>
                             </div>
                         </div>
-                        <div class="catalog-card" onclick="askQuestion('综合排名TOP10')">
+                        <div class="catalog-card"  onclick="askQuestion('综合排名TOP10')">
                             <div class="card-icon">📊</div>
                             <div class="card-title">综合实力排名</div>
                             <div class="card-desc">八大评价维度（战略定位为参考维度不参与排名，其余七维度：资源20%+组织15%+设施10%+信创10%+技术15%+系统10%+数安10%）</div>
@@ -709,7 +752,7 @@
                                 <span class="card-q">八大维度</span>
                             </div>
                         </div>
-                        <div class="catalog-card" onclick="askQuestion('头部标杆分析')">
+                        <div class="catalog-card"  onclick="askQuestion('头部标杆分析')">
                             <div class="card-icon">🏆</div>
                             <div class="card-title">头部标杆分析</div>
                             <div class="card-desc">10家头部公司高端水平对标：中信/平安/华润/建信/交银/华能/上海/中诚/外贸/紫金</div>
@@ -744,6 +787,16 @@
         const queryInput = document.getElementById('queryInput');
         const sendBtn = document.getElementById('sendBtn');
         const welcome = document.getElementById('welcome');
+
+        // 获取或生成唯一的会话 ID
+        function getOrGenerateThreadId() {
+            let threadId = sessionStorage.getItem('agent_thread_id');
+            if (!threadId) {
+                threadId = 'session_' + Math.random().toString(36).substring(2, 15) + '_' + Date.now();
+                sessionStorage.setItem('agent_thread_id', threadId);
+            }
+            return threadId;
+        }
 
         // Auto-resize textarea
         queryInput.addEventListener('input', function() {
@@ -824,9 +877,39 @@
             return div.innerHTML;
         }
 
+        function sanitizeHtml(html) {
+            const template = document.createElement('template');
+            template.innerHTML = html;
+            const blockedTags = new Set(['SCRIPT', 'IFRAME', 'OBJECT', 'EMBED', 'STYLE', 'LINK', 'META', 'BASE', 'FORM', 'INPUT', 'BUTTON']);
+            template.content.querySelectorAll('*').forEach(el => {
+                if (blockedTags.has(el.tagName)) {
+                    el.remove();
+                    return;
+                }
+                [...el.attributes].forEach(attr => {
+                    const name = attr.name.toLowerCase();
+                    const value = attr.value.trim().toLowerCase();
+                    if (name.startsWith('on') || value.startsWith('javascript:') || value.startsWith('data:text/html')) {
+                        el.removeAttribute(attr.name);
+                    }
+                });
+            });
+            return template.innerHTML;
+        }
+
         function markdownToHtml(text) {
-            let html = text;
-            // Tables
+            // 先处理图表标记
+            let processedText = text;
+            const chartRegex = /$$CHART$$(data:image\/png;base64,[^$$]+)\[\/CHART$$/g;
+            processedText = processedText.replace(chartRegex, (match, chartData) => {
+                return `<div class="chart-container"><img src="${chartData}" alt="图表" onclick="window.open(this.src)"></div>`;
+            });
+            
+            if (typeof marked !== 'undefined') {
+                return sanitizeHtml(marked.parse(processedText, { breaks: true, gfm: true }));
+            }
+            let html = escapeHtml(processedText);
+            // Fallback in case marked library fails to load
             html = html.replace(/\n\|(.+)\|\n\|[-| :]+\|\n((?:\|.+\|\n?)+)/g, (match, header, body) => {
                 const headers = header.split('|').filter(h => h.trim());
                 const rows = body.trim().split('\n').map(row => row.split('|').filter(c => c.trim()));
@@ -841,18 +924,14 @@
                 table += '</tbody></table>';
                 return table;
             });
-            // Headers
             html = html.replace(/^### (.+)$/gm, '<h3>$1</h3>');
             html = html.replace(/^## (.+)$/gm, '<h2>$1</h2>');
-            // Bold
             html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
-            // Lists
             html = html.replace(/^- (.+)$/gm, '<li>$1</li>');
             html = html.replace(/(<li>.*<\/li>\n?)+/g, '<ul>$&</ul>');
-            // Line breaks
             html = html.replace(/\n\n/g, '<br><br>');
             html = html.replace(/\n/g, '<br>');
-            return html;
+            return sanitizeHtml(html);
         }
 
         async function sendMessage() {
@@ -860,43 +939,98 @@
             if (!query) return;
 
             const isAgentMode = document.getElementById('agentModeToggle').checked;
-            const endpoint = isAgentMode ? '/api/chat-agent' : '/api/analyze';
+            // 标准模式使用 /api/analyze, Agent 模式使用流式 /api/chat-agent/stream
+            const endpoint = isAgentMode ? '/api/chat-agent/stream' : '/api/analyze';
 
             queryInput.value = '';
             queryInput.style.height = 'auto';
             sendBtn.disabled = true;
 
             addMessage(query, true);
-            addMessage('**[ 模式: ' + (isAgentMode ? 'AI Agent' : '标准分析') + ' ]**', false);
-            addTypingIndicator();
+            addMessage('**[ 模式: ' + (isAgentMode ? 'AI Agent (Streaming)' : '标准分析') + ' ]**', false);
+            
+            if (!isAgentMode) {
+                // 标准分析模式 (JSON 阻塞式)
+                addTypingIndicator();
+                try {
+                    const response = await fetch(endpoint, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ query })
+                    });
+                    const data = await response.json();
+                    removeTypingIndicator();
 
-            try {
-                const response = await fetch(endpoint, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ query, thread_id: 'user_session_001' })
-                });
-                const data = await response.json();
-                removeTypingIndicator();
+                    if (data.error) {
+                        addMessage('错误: ' + data.error, false);
+                    } else {
+                        let content = markdownToHtml(data.result || '未获取到分析结果');
 
-                if (data.error) {
-                    addMessage('错误: ' + data.error, false);
-                } else {
-                    let content = markdownToHtml(data.result || '未获取到分析结果');
+                        // Add charts
+                        if (data.charts && data.charts.length > 0) {
+                            data.charts.forEach(chartSrc => {
+                                content += `<div class="chart-container"><img src="${chartSrc}" alt="图表" onclick="window.open(this.src)"></div>`;
+                            });
+                        }
 
-                    // Add charts
-                    if (data.charts && data.charts.length > 0) {
-                        data.charts.forEach(chartSrc => {
-                            content += `<div class="chart-container"><img src="${chartSrc}" alt="图表" onclick="window.open(this.src)"></div>`;
-                        });
+                        addMessage(content, false);
                     }
-
-                    addMessage(content, false);
+                } catch (error) {
+                    removeTypingIndicator();
+                    addMessage('抱歉，分析过程中出现错误，请稍后重试。', false);
+                    console.error(error);
                 }
-            } catch (error) {
-                removeTypingIndicator();
-                addMessage('抱歉，分析过程中出现错误，请稍后重试。', false);
-                console.error(error);
+            } else {
+                // AI Agent 模式 (SSE 流式)
+                const aiMsgDiv = addMessage('', false);
+                const bubble = aiMsgDiv.querySelector('.bubble');
+                addTypingIndicator();
+
+                try {
+                    const response = await fetch(endpoint, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ query, thread_id: getOrGenerateThreadId() })
+                    });
+
+                    removeTypingIndicator();
+                    
+                    const reader = response.body.getReader();
+                    const decoder = new TextDecoder();
+                    let fullContent = "";
+
+                    while (true) {
+                        const { done, value } = await reader.read();
+                        if (done) break;
+
+                        const chunk = decoder.decode(value);
+                        const lines = chunk.split('\n');
+                        
+                        for (const line of lines) {
+                            if (line.startsWith('data: ')) {
+                                try {
+                                    const data = JSON.parse(line.substring(6));
+                                    if (data.error) {
+                                        bubble.innerHTML = `<span style="color:red">错误: ${data.error}</span>`;
+                                        break;
+                                    }
+                                    if (data.content) {
+                                        fullContent += data.content;
+                                        // 实时渲染 Markdown
+                                        bubble.innerHTML = markdownToHtml(fullContent);
+                                        chatMessages.scrollTop = chatMessages.scrollHeight;
+                                    }
+                                } catch (e) {
+                                    console.error("解析流数据出错", e);
+                                }
+                            }
+                        }
+                    }
+                } catch (error) {
+                    removeTypingIndicator();
+                    bubble.innerHTML = '<span style="color:red">连接 Agent 出错，请重试。</span>';
+                    console.error(error);
+                }
             }
 
             sendBtn.disabled = false;
@@ -915,6 +1049,26 @@
             })
             .catch(() => {});
 
+        // ============ 加载数字概览统计数据 ============
+        function loadDashboardStats() {
+            fetch('/api/dashboard-stats')
+                .then(r => r.json())
+                .then(data => {
+                    if (data.success) {
+                        document.getElementById('statCompanies').textContent = data.total_companies || 61;
+                        document.getElementById('statFields').textContent = data.total_fields || 256;
+                        document.getElementById('statDimensions').textContent = data.dimensions || 10;
+                        document.getElementById('statAvgInvest').textContent = data.avg_invest ? Math.round(data.avg_invest) : '-';
+                        document.getElementById('statAvgTech').textContent = data.avg_tech ? Math.round(data.avg_tech) : '-';
+                        document.getElementById('statCIO').textContent = data.cio_count || '-';
+                        document.getElementById('statAI').textContent = data.ai_count || '-';
+                        document.getElementById('statXinchuang').textContent = data.xinchuang_count || '-';
+                    }
+                })
+                .catch(() => { console.log('加载统计数据失败，使用默认值'); });
+        }
+        document.addEventListener('DOMContentLoaded', function() { loadDashboardStats(); });
+        
         // ============ 头部标杆配置功能 ============
         let allCompanies = [];
         let currentHeadBenchmark = [];
@@ -1542,5 +1696,7 @@
             </div>
         </div>
     </div>
+    <script src="marked.min.js"></script>
+    <script src="smart_cards.js"></script>
 </body>
 </html>
