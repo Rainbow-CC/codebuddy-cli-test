@@ -53,7 +53,10 @@ async def main():
     print("--- LangGraph Agent  已启动 ---")
     print("输入 'exit' 退出对话。\n")
     
-    config = {"configurable": {"thread_id": "user_session_001"}}
+    config = {
+        "configurable": {"thread_id": "user_session_001"},
+        "recursion_limit": 100,
+    }
 
     while True:
         try:

@@ -3268,4 +3268,4 @@ register_smart_cards_blueprint(app)
 
 if __name__ == '__main__':
     os.makedirs('/data/user/work/static', exist_ok=True)
-    app.run(host=os.getenv('TRUST_DATA_HOST', '127.0.0.1'), port=5000, debug=False)
+    app.run(host=os.getenv('TRUST_DATA_HOST', '0.0.0.0'), port=5000, debug=False)

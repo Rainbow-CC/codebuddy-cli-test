@@ -70,7 +70,10 @@ def _get_agent():
 async def get_agent_response(query: str, thread_id: str = "default_user"):
     agent = _get_agent()
     
-    config = {"configurable": {"thread_id": thread_id}}
+    config = {
+        "configurable": {"thread_id": thread_id},
+        "recursion_limit": 100,
+    }
     input_data = {"messages": [HumanMessage(content=query)]}
     
     response_content = ""
@@ -90,7 +93,10 @@ async def get_agent_streaming_response(query: str, thread_id: str = "default_use
     """
     agent = _get_agent()
     
-    config = {"configurable": {"thread_id": thread_id}}
+    config = {
+        "configurable": {"thread_id": thread_id},
+        "recursion_limit": 100,
+    }
     input_data = {"messages": [HumanMessage(content=query)]}
     
     # 使用 astream_events 获取更细粒度的流式事件
