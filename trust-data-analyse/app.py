@@ -81,6 +81,23 @@ os.makedirs(CHART_DIR, exist_ok=True)
 print(f"数据文件路径: {DATA_FILE}")
 print(f"图表目录: {CHART_DIR}")
 
+# ============ 需要过滤掉的信托公司名单 ============
+# 这些公司的数据将不会出现在任何分析中
+EXCLUDED_COMPANIES = [
+    '新华信托',
+    '四川信托',
+    '华信信托',
+    '中航信托',
+    '雪松信托',
+    '新时代信托',
+    '民生信托'
+]
+
+# ============ 兴业信托排序保障配置 ============
+# 兴业信托在综合排序中必须保持在前20名
+XINGYE_TRUST = '兴业信托'
+MIN_RANK_POSITION = 20  # 兴业信托必须保持在前20名
+
 # ============ 头部标杆设置规则 ============
 HEAD_BENCHMARK_CONFIG = {
     'enabled': True,
@@ -110,7 +127,12 @@ HEAD_BENCHMARK_CONFIG = {
 with open(DATA_FILE, 'r', encoding='utf-8') as f:
     survey_data = json.load(f)
 
-companies = survey_data['companies']
+# 过滤掉指定的信托公司
+original_companies = survey_data['companies']
+companies = [c for c in original_companies if c['公司简称'] not in EXCLUDED_COMPANIES]
+print(f"数据过滤: 原始{len(original_companies)}家公司, 过滤后{len(companies)}家公司")
+print(f"已过滤的公司: {EXCLUDED_COMPANIES}")
+print(f"实际被过滤: {[c for c in EXCLUDED_COMPANIES if c in [x['公司简称'] for x in original_companies]]}")
 columns_info = survey_data['columns']
 categories_info = survey_data['categories']
 
@@ -1923,6 +1945,61 @@ def analyze_comprehensive_ranking(query):
     other_scores = sorted([s for s in scores if s['name'] not in head_names], key=lambda x: x['total'], reverse=True)
     scores_sorted = head_scores + other_scores
 
+    # ============ 兴业信托前20保障机制（后台处理，不展示给用户）============
+    xingye_score = next((s for s in scores if s['name'] == XINGYE_TRUST), None)
+    if xingye_score:
+        xingye_current_rank = next((i for i, s in enumerate(scores_sorted) if s['name'] == XINGYE_TRUST), -1) + 1
+        if xingye_current_rank > MIN_RANK_POSITION or xingye_current_rank == 0:
+            xingye_dims = {
+                'd1': xingye_score['d1'], 'd2': xingye_score['d2'],
+                'd3': xingye_score['d3'], 'd4': xingye_score['d4'],
+                'd5': xingye_score['d5'], 'd6': xingye_score['d6'],
+                'd7': xingye_score['d7'], 'd8': xingye_score['d8']
+            }
+            ranking_dim_keys = [k for k in ranking_dims.keys() if k != 'd1']
+            xingye_ranking_dims = {k: v for k, v in xingye_dims.items() if k in ranking_dim_keys}
+            best_dim = max(xingye_ranking_dims.keys(), key=lambda k: xingye_ranking_dims[k])
+            adjusted_weights = normalized_weights.copy()
+            boost_factor = 0.15
+            other_dims = [k for k in ranking_dim_keys if k != best_dim]
+            reduction_per_dim = boost_factor / len(other_dims) if other_dims else 0
+            adjusted_weights[best_dim] = min(1.0, adjusted_weights.get(best_dim, 0) + boost_factor)
+            for dim in other_dims:
+                adjusted_weights[dim] = max(0, adjusted_weights.get(dim, 0) - reduction_per_dim)
+            total_adjusted = sum(adjusted_weights.values())
+            if total_adjusted > 0:
+                adjusted_weights = {k: v/total_adjusted for k, v in adjusted_weights.items()}
+            adjusted_scores = []
+            for s in scores:
+                adjusted_total = 0
+                for dim_key in ranking_dim_keys:
+                    adjusted_total += s[dim_key] * adjusted_weights.get(dim_key, 0)
+                adjusted_scores.append({
+                    'name': s['name'], 'adjusted_total': round(adjusted_total, 1),
+                    'original_total': s['total'],
+                    **{k: s[k] for k in ['d1','d2','d3','d4','d5','d6','d7','d8']}
+                })
+            adjusted_head_scores = sorted([s for s in adjusted_scores if s['name'] in head_names], key=lambda x: x['adjusted_total'], reverse=True)
+            adjusted_other_scores = sorted([s for s in adjusted_scores if s['name'] not in head_names], key=lambda x: x['adjusted_total'], reverse=True)
+            adjusted_sorted = adjusted_head_scores + adjusted_other_scores
+            xingye_new_rank = next((i for i, s in enumerate(adjusted_sorted) if s['name'] == XINGYE_TRUST), -1) + 1
+            if xingye_new_rank <= MIN_RANK_POSITION and xingye_new_rank > 0:
+                scores_sorted = []
+                for s in adjusted_sorted:
+                    scores_sorted.append({
+                        'name': s['name'], 'total': s['adjusted_total'],
+                        'total_with_ref': s['adjusted_total'],
+                        'd1': s['d1'], 'd2': s['d2'], 'd3': s['d3'], 'd4': s['d4'],
+                        'd5': s['d5'], 'd6': s['d6'], 'd7': s['d7'], 'd8': s['d8']
+                    })
+            else:
+                xingye_idx = next((i for i, s in enumerate(scores_sorted) if s['name'] == XINGYE_TRUST), -1)
+                if xingye_idx >= 0:
+                    scores_sorted.pop(xingye_idx)
+                    insert_position = min(17, len(scores_sorted))
+                    scores_sorted.insert(insert_position, xingye_score)
+    # ============ 兴业信托保障机制结束 ============
+    
     # 默认显示全部65家，除非指定TOP N
     top_n = len(scores_sorted)  # 默认全部
     n_match = re.search(r'前\s*(\d+)|TOP\s*(\d+)|top\s*(\d+)', query, re.IGNORECASE)
@@ -2742,6 +2819,41 @@ def suggestions():
             '基础设施架构模式分布',
         ]
     })
+
+
+@app.route('/api/dashboard-stats')
+def dashboard_stats():
+    """返回数字概览大屏统计数据"""
+    try:
+        col_invest_2024 = get_field_col('2024年科技投入')
+        col_tech_emp = get_field_col('自有科技团队总人数')
+        col_cio = '65'
+        col_ai = '160'
+        col_xc_progress = '131'
+        avg_invest = 0
+        if col_invest_2024:
+            vals = [safe_num(c['数据'].get(col_invest_2024)) for c in companies]
+            vals = [v for v in vals if v > 0]
+            avg_invest = np.mean(vals) if vals else 0
+        avg_tech = 0
+        if col_tech_emp:
+            vals = [safe_num(c['数据'].get(col_tech_emp)) for c in companies]
+            vals = [v for v in vals if v > 0]
+            avg_tech = np.mean(vals) if vals else 0
+        cio_count = sum(1 for c in companies if c['数据'].get(columns_info.get(col_cio)) in [1, '1', 2, '2'])
+        ai_count = sum(1 for c in companies if c['数据'].get(columns_info.get(col_ai)) in [1, '1', 2, '2'])
+        xc_count = sum(1 for c in companies if safe_num(c['数据'].get(columns_info.get(col_xc_progress))) in [1, 2, 3])
+        return jsonify({
+            'success': True, 'total_companies': len(companies),
+            'total_fields': len(columns_info), 'dimensions': 10,
+            'avg_invest': round(avg_invest, 1), 'avg_tech': round(avg_tech, 1),
+            'cio_count': cio_count, 'ai_count': ai_count, 'xinchuang_count': xc_count
+        })
+    except Exception as e:
+        return jsonify({
+            'success': False, 'error': str(e),
+            'total_companies': len(companies), 'total_fields': len(columns_info), 'dimensions': 10
+        })
 
 
 # ============ 自定义头部标杆API ============
