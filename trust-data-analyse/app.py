@@ -129,7 +129,10 @@ def chat_agent_stream():
                 try:
                     chunk = loop.run_until_complete(gen.__anext__())
                     if chunk:
-                        yield f"data: {json.dumps(chunk)}\n\n"
+                        if isinstance(chunk, dict):
+                            yield f"data: {json.dumps(chunk)}\n\n"
+                        else:
+                            yield f"data: {json.dumps({'content': chunk})}\n\n"
                 except StopAsyncIteration:
                     break
                 except Exception as e:
@@ -138,7 +141,14 @@ def chat_agent_stream():
         finally:
             loop.close()
     
-    return Response(stream_with_context(generate()), mimetype='text/event-stream')
+    return Response(
+        stream_with_context(generate()),
+        mimetype='text/event-stream',
+        headers={
+            'Cache-Control': 'no-cache',
+            'X-Accel-Buffering': 'no',
+        },
+    )
 
 # ========== 数据统计API ==========
 

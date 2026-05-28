@@ -51,6 +51,10 @@ DB_PATH = os.path.join(BASE_DIR, "trust_survey.db")
 XINGYE_TRUST_NAME = "兴业信托"
 MIN_RANK_POSITION = 20  # 保证兴业信托在前20名
 
+# 固定所有图表导出尺寸，避免不同标签/标题导致前端图片大小跳变
+CHART_FIGSIZE = (10, 6)
+CHART_DPI = 120
+
 # 只读SQL前缀
 READ_ONLY_SQL_PREFIXES = ("select", "with")
 
@@ -85,14 +89,15 @@ def safe_num(val) -> float:
 def generate_chart_base64(fig) -> str:
     """将图表转换为base64字符串"""
     buffer = io.BytesIO()
-    fig.savefig(buffer, format='png', dpi=120, bbox_inches='tight', facecolor='white')
+    fig.set_size_inches(*CHART_FIGSIZE)
+    fig.savefig(buffer, format='png', dpi=CHART_DPI, facecolor='white')
     plt.close(fig)
     buffer.seek(0)
     b64 = base64.b64encode(buffer.read()).decode()
     return f'data:image/png;base64,{b64}'
 
 def make_bar_chart(labels: List[str], values: List[float], title: str, 
-                   horizontal: bool = False, figsize: tuple = (10, 6)) -> str:
+                   horizontal: bool = False, figsize: tuple = CHART_FIGSIZE) -> str:
     """生成柱状图"""
     fig, ax = plt.subplots(figsize=figsize)
     colors = plt.cm.Set3(np.linspace(0, 1, len(labels)))
@@ -119,7 +124,7 @@ def make_bar_chart(labels: List[str], values: List[float], title: str,
     return generate_chart_base64(fig)
 
 def make_pie_chart(labels: List[str], values: List[float], title: str, 
-                   figsize: tuple = (8, 6)) -> Optional[str]:
+                   figsize: tuple = CHART_FIGSIZE) -> Optional[str]:
     """生成饼图"""
     fig, ax = plt.subplots(figsize=figsize)
     non_zero = [(l, v) for l, v in zip(labels, values) if v > 0]
@@ -135,7 +140,7 @@ def make_pie_chart(labels: List[str], values: List[float], title: str,
     return generate_chart_base64(fig)
 
 def make_radar_chart(dimensions: List[str], values: List[float], title: str,
-                     figsize: tuple = (8, 8)) -> str:
+                     figsize: tuple = CHART_FIGSIZE) -> str:
     """生成雷达图"""
     fig, ax = plt.subplots(figsize=figsize, subplot_kw=dict(polar=True))
     
@@ -336,7 +341,7 @@ def analyze_ranking_for_chart(query: str) -> Dict[str, Any]:
                     chart_title = f'{keyword}排名TOP20'
                     break
             
-            result['chart_data'] = make_bar_chart(labels, values, chart_title, horizontal=True, figsize=(10, 8))
+            result['chart_data'] = make_bar_chart(labels, values, chart_title, horizontal=True)
             
             # 生成摘要
             xingye_position = None
@@ -461,7 +466,7 @@ def generate_analysis_chart(chart_type: str, data_description: str) -> str:
         elif chart_type == 'radar':
             chart_base64 = make_radar_chart(labels, values, title)
         elif chart_type == 'ranking':
-            chart_base64 = make_bar_chart(labels, values, title, horizontal=True, figsize=(10, 8))
+            chart_base64 = make_bar_chart(labels, values, title, horizontal=True)
         else:
             return ""
         
@@ -519,10 +524,12 @@ def create_survey_agent():
     os.environ["OPENAI_API_KEY"] = "sk-b3b18ddacef84515bdc8763d5950ba82"
     
     llm = ChatOpenAI(
-        model="qwen3.6-flash",
+        model="qwen3.6-max-preview",
         api_key="sk-b3b18ddacef84515bdc8763d5950ba82",
         base_url="https://dashscope.aliyuncs.com/compatible-mode/v1",
-        temperature=0
+        temperature=0.1,
+        streaming=True,
+        extra_body={"enable_thinking": False},
     )
     
     # 2. 加载Skill指令
@@ -586,6 +593,11 @@ def create_survey_agent():
 必须使用JSON格式传入数据，例如：
 {"labels": ["公司A", "公司B", "公司C"], "values": [100, 80, 120], "title": "科技投入对比"}
 
+**最终回复限制**：
+- 可以调用 `generate_analysis_chart` 或 `get_ranking_with_xingye_guarantee` 生成图表，但最终文字回复中禁止输出任何图片标签或图片链接。
+- 不要输出 `<img ...>`、`![...](...)`、`data:image/...`、`http://ds-restful-api...`、OSS图片链接或任何图片URL。
+- 图表由系统前端根据工具返回值单独展示。你的最终回复只需要用文字说明图表结论，不要把工具返回的图片地址、base64内容或HTML复制到回答中。
+
 【数据安全规则】
 
 1. 只使用SELECT/WITH查询，禁止INSERT/UPDATE/DELETE/DROP
@@ -646,6 +658,27 @@ def _get_agent():
                 _agent = create_survey_agent()
     return _agent
 
+def _safe_get(value: Any, key: str, default: Any = None) -> Any:
+    """兼容读取 LangChain 事件中的 dict 和消息对象字段。"""
+    if isinstance(value, dict):
+        return value.get(key, default)
+    return getattr(value, key, default)
+
+def _extract_message_content(message: Any) -> str:
+    """从 AIMessage/AIMessageChunk/dict 中提取文本内容。"""
+    content = _safe_get(message, "content", "")
+    if isinstance(content, str):
+        return content
+    if isinstance(content, list):
+        text_parts = []
+        for part in content:
+            if isinstance(part, str):
+                text_parts.append(part)
+            elif isinstance(part, dict):
+                text_parts.append(str(part.get("text", "")))
+        return "".join(text_parts)
+    return str(content) if content else ""
+
 async def get_agent_response(query: str, thread_id: str = "default_user") -> dict:
     """获取Agent响应（阻塞式）"""
     agent = _get_agent()
@@ -665,7 +698,8 @@ async def get_agent_response(query: str, thread_id: str = "default_user") -> dic
             
             # 处理最终响应
             if kind == "on_chat_model_end":
-                content = event.get("data", {}).get("message", {}).get("content", "")
+                message = event.get("data", {}).get("message", {})
+                content = _extract_message_content(message)
                 if content:
                     response_content = content
             
@@ -687,7 +721,7 @@ async def get_agent_response(query: str, thread_id: str = "default_user") -> dic
     return {"content": response_content, "charts": charts}
 
 async def get_agent_streaming_response(query: str, thread_id: str = "default_user"):
-    """流式获取Agent响应"""
+    """流式获取Agent响应。文本逐段返回，图表在文本结束后批量返回。"""
     agent = _get_agent()
     
     config = {
@@ -695,30 +729,32 @@ async def get_agent_streaming_response(query: str, thread_id: str = "default_use
         "recursion_limit": 100,
     }
     input_data = {"messages": [HumanMessage(content=query)]}
-    
+    charts = []
+
     with _agent_invoke_lock:
         async for event in agent.astream_events(input_data, config, version="v2"):
             kind = event.get("event", "")
-            
+
             if kind == "on_chat_model_stream":
-                content = event.get("data", {}).get("chunk", {}).get("content", "")
+                chunk = event.get("data", {}).get("chunk", {})
+                content = _extract_message_content(chunk)
                 if content:
-                    yield {"type": "text", "content": content}
-            
-            # 处理工具调用结果（图表等）
+                    yield content
+
             elif kind == "on_tool_end":
                 tool_name = event.get("name", "")
                 tool_output = event.get("data", {}).get("output", "")
-                
-                # 提取ToolMessage的content
+
                 if hasattr(tool_output, 'content'):
                     tool_output = tool_output.content
-                
-                # 如果是图表生成工具或排名工具，提取图表数据
-                if (tool_name == "generate_analysis_chart" or 
+
+                if (tool_name == "generate_analysis_chart" or
                     tool_name == "get_ranking_with_xingye_guarantee") and tool_output:
                     if isinstance(tool_output, str) and tool_output.startswith("data:image/png;base64,"):
-                        yield {"type": "chart", "content": tool_output}
+                        charts.append(tool_output)
+
+    if charts:
+        yield {"charts": charts}
 
 # ========== 统计数据API ==========
 

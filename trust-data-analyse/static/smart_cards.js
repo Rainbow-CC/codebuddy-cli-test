@@ -349,7 +349,17 @@ async function streamSmartAnalysis(endpoint, payload, item, isQuickQuestion = fa
     const container = typeof chatMessages !== 'undefined' ? chatMessages : document.getElementById('chatMessages');
     
     let fullContent = "";
+    let pendingBuffer = "";
+    let renderedCharts = [];
     let badgeSet = false;
+
+    const renderContent = () => {
+        const chartHtml = renderedCharts.map(chartSrc =>
+            `<div class="chart-container"><img src="${chartSrc}" alt="分析图表" onclick="window.open(this.src)"></div>`
+        ).join('');
+        contentDiv.innerHTML = formatAnalysisResult(fullContent) + chartHtml;
+        container.scrollTop = container.scrollHeight;
+    };
 
     try {
         const response = await fetch(endpoint, {
@@ -369,8 +379,9 @@ async function streamSmartAnalysis(endpoint, payload, item, isQuickQuestion = fa
             const { done, value } = await reader.read();
             if (done) break;
 
-            const chunk = decoder.decode(value);
-            const lines = chunk.split('\n');
+            pendingBuffer += decoder.decode(value, { stream: true });
+            const lines = pendingBuffer.split('\n');
+            pendingBuffer = lines.pop() || '';
 
             for (const line of lines) {
                 if (line.trim().startsWith('data: ')) {
@@ -392,14 +403,40 @@ async function streamSmartAnalysis(endpoint, payload, item, isQuickQuestion = fa
 
                         if (data.content) {
                             fullContent += data.content;
-                            // 实时刷新内容渲染
-                            contentDiv.innerHTML = formatAnalysisResult(fullContent);
-                            container.scrollTop = container.scrollHeight;
+                            renderContent();
+                        }
+
+                        if (data.chart) {
+                            renderedCharts.push(data.chart);
+                            renderContent();
+                        }
+
+                        if (Array.isArray(data.charts)) {
+                            renderedCharts.push(...data.charts.filter(Boolean));
+                            renderContent();
                         }
                     } catch (e) {
                         console.error("解析流数据出错", e);
                     }
                 }
+            }
+        }
+
+        if (pendingBuffer.trim().startsWith('data: ')) {
+            try {
+                const data = JSON.parse(pendingBuffer.trim().substring(6));
+                if (data.content) {
+                    fullContent += data.content;
+                }
+                if (data.chart) {
+                    renderedCharts.push(data.chart);
+                }
+                if (Array.isArray(data.charts)) {
+                    renderedCharts.push(...data.charts.filter(Boolean));
+                }
+                renderContent();
+            } catch (e) {
+                console.error("解析流数据出错", e);
             }
         }
     } catch (e) {

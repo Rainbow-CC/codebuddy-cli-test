@@ -1035,13 +1035,24 @@
                     const reader = response.body.getReader();
                     const decoder = new TextDecoder();
                     let fullContent = "";
+                    let pendingBuffer = "";
+                    let renderedCharts = [];
+
+                    const renderStreamContent = () => {
+                        const chartHtml = renderedCharts.map(chartSrc =>
+                            `<div class="chart-container"><img src="${chartSrc}" alt="分析图表" onclick="window.open(this.src)"></div>`
+                        ).join('');
+                        bubble.innerHTML = markdownToHtml(fullContent) + chartHtml;
+                        chatMessages.scrollTop = chatMessages.scrollHeight;
+                    };
 
                     while (true) {
                         const { done, value } = await reader.read();
                         if (done) break;
 
-                        const chunk = decoder.decode(value);
-                        const lines = chunk.split('\n');
+                        pendingBuffer += decoder.decode(value, { stream: true });
+                        const lines = pendingBuffer.split('\n');
+                        pendingBuffer = lines.pop() || '';
                         
                         for (const line of lines) {
                             if (line.startsWith('data: ')) {
@@ -1053,18 +1064,33 @@
                                     }
                                     if (data.content) {
                                         fullContent += data.content;
-                                        bubble.innerHTML = markdownToHtml(fullContent);
-                                        chatMessages.scrollTop = chatMessages.scrollHeight;
+                                        renderStreamContent();
                                     }
                                     // 处理图表数据
                                     if (data.chart) {
-                                        const chartHtml = `<div class="chart-container"><img src="${data.chart}" alt="分析图表" onclick="window.open(this.src)"></div>`;
-                                        bubble.innerHTML += chartHtml;
+                                        renderedCharts.push(data.chart);
+                                        renderStreamContent();
+                                    }
+                                    if (Array.isArray(data.charts)) {
+                                        renderedCharts.push(...data.charts.filter(Boolean));
+                                        renderStreamContent();
                                     }
                                 } catch (e) {
                                     console.error("解析流数据出错", e);
                                 }
                             }
+                        }
+                    }
+
+                    if (pendingBuffer.trim().startsWith('data: ')) {
+                        try {
+                            const data = JSON.parse(pendingBuffer.trim().substring(6));
+                            if (data.content) fullContent += data.content;
+                            if (data.chart) renderedCharts.push(data.chart);
+                            if (Array.isArray(data.charts)) renderedCharts.push(...data.charts.filter(Boolean));
+                            renderStreamContent();
+                        } catch (e) {
+                            console.error("解析流数据出错", e);
                         }
                     }
                 } catch (error) {
