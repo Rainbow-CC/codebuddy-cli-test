@@ -91,6 +91,77 @@
             align-items: center;
             gap: 6px;
         }
+        
+        /* 数据概览大屏样式 */
+        .data-overview-card {
+            background: linear-gradient(135deg, #1a237e 0%, #1565c0 100%);
+            color: white;
+            border-radius: 12px;
+            padding: 16px;
+            box-shadow: var(--shadow-lg);
+        }
+        .data-overview-card h3 {
+            color: white;
+            margin-bottom: 16px;
+            font-size: 15px;
+        }
+        .overview-stats {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+        }
+        .overview-stat-item {
+            background: rgba(255,255,255,0.15);
+            border-radius: 8px;
+            padding: 12px;
+            text-align: center;
+        }
+        .overview-stat-value {
+            font-size: 28px;
+            font-weight: 700;
+            color: white;
+        }
+        .overview-stat-label {
+            font-size: 11px;
+            color: rgba(255,255,255,0.8);
+            margin-top: 4px;
+        }
+        .overview-stat-change {
+            font-size: 10px;
+            margin-top: 2px;
+            color: #4caf50;
+        }
+        .overview-stat-change.down {
+            color: #ff9800;
+        }
+        
+        /* 关键指标卡片 */
+        .key-metrics-card {
+            background: var(--card-bg);
+            border-radius: 12px;
+            padding: 16px;
+            box-shadow: var(--shadow);
+        }
+        .metric-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 0;
+            border-bottom: 1px solid #f0f0f0;
+        }
+        .metric-row:last-child {
+            border-bottom: none;
+        }
+        .metric-label {
+            font-size: 12px;
+            color: var(--text-secondary);
+        }
+        .metric-value {
+            font-size: 16px;
+            font-weight: 600;
+            color: var(--primary);
+        }
+        
         .suggestion-item {
             padding: 8px 12px;
             border-radius: 8px;
@@ -474,6 +545,20 @@
             margin-bottom: 2px;
             font-weight: 600;
         }
+        
+        /* 图表展示区域样式 */
+        .analysis-chart-area {
+            margin: 16px 0;
+            padding: 12px;
+            background: #f8f9fa;
+            border-radius: 8px;
+        }
+        .chart-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text);
+            margin-bottom: 8px;
+        }
     </style>
 </head>
 <body>
@@ -481,52 +566,58 @@
         <div class="header-icon">📊</div>
         <div>
             <h1>信托行业科技建设数据分析智能体</h1>
-            <div class="subtitle">基于65家信托公司科技能力调研数据 · 智能问答分析</div>
+            <div class="subtitle">基于61家信托公司科技能力调研数据 · 智能问答分析</div>
         </div>
         <a href="/" class="home-btn" onclick="returnToHome(event)">🏠 返回首页</a>
     </div>
 
     <div class="main">
         <div class="sidebar">
-            <div class="sidebar-card">
-                <h3>📋 数据概览</h3>
-                <div class="stats-bar">
-                    <div class="stat-item">
-                        <div class="stat-value">65</div>
-                        <div class="stat-label">信托公司</div>
+            <!-- 数据概览大屏卡片（放在最上方） -->
+            <div class="data-overview-card">
+                <h3>📊 底层问卷数据概览</h3>
+                <div class="overview-stats">
+                    <div class="overview-stat-item">
+                        <div class="overview-stat-value" id="overviewCompanies">61</div>
+                        <div class="overview-stat-label">信托公司</div>
                     </div>
-                    <div class="stat-item">
-                        <div class="stat-value">256</div>
-                        <div class="stat-label">数据字段</div>
+                    <div class="overview-stat-item">
+                        <div class="overview-stat-value" id="overviewFields">256</div>
+                        <div class="overview-stat-label">数据字段</div>
                     </div>
-                    <div class="stat-item">
-                        <div class="stat-value">10</div>
-                        <div class="stat-label">调研维度</div>
+                    <div class="overview-stat-item">
+                        <div class="overview-stat-value" id="overviewDimensions">10</div>
+                        <div class="overview-stat-label">调研维度</div>
+                    </div>
+                    <div class="overview-stat-item">
+                        <div class="overview-stat-value" id="overviewCoverage">95%</div>
+                        <div class="overview-stat-label">数据完整度</div>
                     </div>
                 </div>
             </div>
-            <div class="sidebar-card">
-                <h3>⚙️ 头部标杆设置</h3>
-                <p style="font-size:12px;color:var(--text-secondary);margin-bottom:10px;">自定义综合排名的头部标杆公司</p>
-                <button onclick="openHeadBenchmarkModal()" style="width:100%;padding:10px;background:var(--primary);color:white;border:none;border-radius:8px;cursor:pointer;font-size:13px;">
-                    🏆 配置头部标杆
-                </button>
-                <div id="currentHeadBenchmark" style="margin-top:10px;font-size:11px;color:var(--text-secondary);">
-                    当前：系统默认
+            
+            <!-- 关键指标统计卡片 -->
+            <div class="key-metrics-card">
+                <h3>📈 关键指标统计</h3>
+                <div class="metric-row">
+                    <span class="metric-label">2024年科技投入均值</span>
+                    <span class="metric-value" id="avgInvestment">--</span>
+                </div>
+                <div class="metric-row">
+                    <span class="metric-label">科技人员占比均值</span>
+                    <span class="metric-value" id="avgTechRatio">--</span>
+                </div>
+                <div class="metric-row">
+                    <span class="metric-label">CIO设立比例</span>
+                    <span class="metric-value" id="cioRatio">--</span>
+                </div>
+                <div class="metric-row">
+                    <span class="metric-label">AI应用覆盖率</span>
+                    <span class="metric-value" id="aiCoverage">--</span>
                 </div>
             </div>
 
-            <div class="sidebar-card">
-                <h3>📊 维度与权重设置</h3>
-                <p style="font-size:12px;color:var(--text-secondary);margin-bottom:10px;">自定义排名维度和权重</p>
-                <button onclick="openDimensionsModal()" style="width:100%;padding:10px;background:#28a745;color:white;border:none;border-radius:8px;cursor:pointer;font-size:13px;">
-                    ⚖️ 配置维度权重
-                </button>
-                <div id="currentDimensions" style="margin-top:10px;font-size:11px;color:var(--text-secondary);">
-                    当前：8维度默认权重
-                </div>
-            </div>
-
+            <!-- 原始数据查看卡片（移到左上角位置） -->
             <div class="sidebar-card">
                 <h3>📋 原始数据查看</h3>
                 <p style="font-size:12px;color:var(--text-secondary);margin-bottom:10px;">查看所有分析依据的原始表格数据</p>
@@ -535,6 +626,7 @@
                 </button>
             </div>
 
+            <!-- 字段查询卡片 -->
             <div class="sidebar-card">
                 <h3>🔍 字段查询</h3>
                 <p style="font-size:12px;color:var(--text-secondary);margin-bottom:10px;">查询任意公司的任意指标</p>
@@ -543,6 +635,7 @@
                 </button>
             </div>
 
+            <!-- 分析维度卡片 -->
             <div class="sidebar-card">
                 <h3>🏷️ 分析维度</h3>
                 <div class="category-list">
@@ -581,6 +674,8 @@
                     </div>
                 </div>
             </div>
+            
+            <!-- 快捷提问卡片 -->
             <div class="sidebar-card">
                 <h3>💡 快捷提问</h3>
                 <div id="suggestions"></div>
@@ -592,7 +687,7 @@
                 <div class="welcome" id="welcome">
                     <div class="logo">🤖</div>
                     <h2>信托行业科技建设数据分析智能体</h2>
-                    <p>基于65家信托公司、256个数据字段的科技能力调研数据，支持多维度智能分析。点击下方卡片即可开始探索。</p>
+                    <p>基于61家信托公司、256个数据字段的科技能力调研数据，支持多维度智能分析。点击下方卡片即可开始探索。</p>
                     <div class="welcome-chips">
                         <div class="welcome-chip" onclick="askQuestion('头部标杆分析')">🏆 头部标杆</div>
                         <div class="welcome-chip" onclick="askQuestion('综合排名TOP10')">📊 综合排名</div>
@@ -701,23 +796,22 @@
                                 <span class="card-q">数据中台</span>
                             </div>
                         </div>
-                        <div class="catalog-card"  onclick="askQuestion('综合排名TOP10')">
+                        <div class="catalog-card" onclick="askQuestion('综合排名TOP10')">
                             <div class="card-icon">📊</div>
                             <div class="card-title">综合实力排名</div>
-                            <div class="card-desc">八大评价维度（战略定位为参考维度不参与排名，其余七维度：资源20%+组织15%+设施10%+信创10%+技术15%+系统10%+数安10%）</div>
+                            <div class="card-desc">八大评价维度综合排名分析</div>
                             <div class="card-questions">
                                 <span class="card-q">综合排名</span>
                                 <span class="card-q">八大维度</span>
                             </div>
                         </div>
-                        <div class="catalog-card"  onclick="askQuestion('头部标杆分析')">
+                        <div class="catalog-card" onclick="askQuestion('头部标杆分析')">
                             <div class="card-icon">🏆</div>
                             <div class="card-title">头部标杆分析</div>
-                            <div class="card-desc">10家头部公司高端水平对标：中信/平安/华润/建信/交银/华能/上海/中诚/外贸/紫金</div>
+                            <div class="card-desc">头部公司高端水平对标分析</div>
                             <div class="card-questions">
                                 <span class="card-q">头部标杆</span>
                                 <span class="card-q">高端对标</span>
-                                <span class="card-q">头部排名</span>
                             </div>
                         </div>
                     </div>
@@ -727,7 +821,7 @@
                 <div class="agent-toggle-wrapper">
                     <div class="agent-toggle-label">🤖 AI Agent</div>
                     <label class="switch">
-                        <input type="checkbox" id="agentModeToggle">
+                        <input type="checkbox" id="agentModeToggle" checked>
                         <span class="slider"></span>
                     </label>
                 </div>
@@ -771,14 +865,12 @@
 
         function returnToHome(e) {
             e.preventDefault();
-            // Clear chat messages and show welcome + catalog
             chatMessages.innerHTML = '';
             if (welcome) welcome.style.display = 'block';
             const catalogSection = document.getElementById('catalogSection');
             if (catalogSection) {
                 catalogSection.style.display = 'block';
             } else {
-                // Reload page to get fresh HTML
                 location.reload();
             }
             return false;
@@ -860,7 +952,6 @@
                 return sanitizeHtml(marked.parse(text, { breaks: true, gfm: true }));
             }
             let html = escapeHtml(text);
-            // Fallback in case marked library fails to load
             html = html.replace(/\n\|(.+)\|\n\|[-| :]+\|\n((?:\|.+\|\n?)+)/g, (match, header, body) => {
                 const headers = header.split('|').filter(h => h.trim());
                 const rows = body.trim().split('\n').map(row => row.split('|').filter(c => c.trim()));
@@ -890,7 +981,6 @@
             if (!query) return;
 
             const isAgentMode = document.getElementById('agentModeToggle').checked;
-            // 标准模式使用 /api/analyze, Agent 模式使用流式 /api/chat-agent/stream
             const endpoint = isAgentMode ? '/api/chat-agent/stream' : '/api/analyze';
 
             queryInput.value = '';
@@ -898,10 +988,8 @@
             sendBtn.disabled = true;
 
             addMessage(query, true);
-            addMessage('**[ 模式: ' + (isAgentMode ? 'AI Agent (Streaming)' : '标准分析') + ' ]**', false);
             
             if (!isAgentMode) {
-                // 标准分析模式 (JSON 阻塞式)
                 addTypingIndicator();
                 try {
                     const response = await fetch(endpoint, {
@@ -917,7 +1005,6 @@
                     } else {
                         let content = markdownToHtml(data.result || '未获取到分析结果');
 
-                        // Add charts
                         if (data.charts && data.charts.length > 0) {
                             data.charts.forEach(chartSrc => {
                                 content += `<div class="chart-container"><img src="${chartSrc}" alt="图表" onclick="window.open(this.src)"></div>`;
@@ -932,7 +1019,6 @@
                     console.error(error);
                 }
             } else {
-                // AI Agent 模式 (SSE 流式)
                 const aiMsgDiv = addMessage('', false);
                 const bubble = aiMsgDiv.querySelector('.bubble');
                 addTypingIndicator();
@@ -967,9 +1053,13 @@
                                     }
                                     if (data.content) {
                                         fullContent += data.content;
-                                        // 实时渲染 Markdown
                                         bubble.innerHTML = markdownToHtml(fullContent);
                                         chatMessages.scrollTop = chatMessages.scrollHeight;
+                                    }
+                                    // 处理图表数据
+                                    if (data.chart) {
+                                        const chartHtml = `<div class="chart-container"><img src="${data.chart}" alt="分析图表" onclick="window.open(this.src)"></div>`;
+                                        bubble.innerHTML += chartHtml;
                                     }
                                 } catch (e) {
                                     console.error("解析流数据出错", e);
@@ -988,6 +1078,23 @@
             queryInput.focus();
         }
 
+        // 加载关键指标数据
+        function loadKeyMetrics() {
+            fetch('/api/stats/overview')
+                .then(r => r.json())
+                .then(data => {
+                    if (data.success) {
+                        document.getElementById('avgInvestment').textContent = data.avg_investment ? `${data.avg_investment.toFixed(0)}万` : '--';
+                        document.getElementById('avgTechRatio').textContent = data.avg_tech_ratio ? `${data.avg_tech_ratio.toFixed(1)}%` : '--';
+                        document.getElementById('cioRatio').textContent = data.cio_ratio ? `${data.cio_ratio.toFixed(1)}%` : '--';
+                        document.getElementById('aiCoverage').textContent = data.ai_coverage ? `${data.ai_coverage.toFixed(1)}%` : '--';
+                        document.getElementById('overviewCompanies').textContent = data.company_count || 61;
+                        document.getElementById('overviewCoverage').textContent = data.data_coverage ? `${data.data_coverage.toFixed(0)}%` : '95%';
+                    }
+                })
+                .catch(() => {});
+        }
+
         // Load suggestions
         fetch('/api/suggestions')
             .then(r => r.json())
@@ -1000,296 +1107,14 @@
             })
             .catch(() => {});
 
-        // ============ 头部标杆配置功能 ============
-        let allCompanies = [];
-        let currentHeadBenchmark = [];
-
-        // 加载头部标杆配置
-        function loadHeadBenchmark() {
-            fetch('/api/head-benchmark')
-                .then(r => r.json())
-                .then(data => {
-                    allCompanies = data.all_companies || [];
-                    currentHeadBenchmark = (data.companies || []).map(c => c.name);
-                    const isUserDefined = data.is_user_defined;
-                    
-                    // 更新侧边栏显示
-                    const statusEl = document.getElementById('currentHeadBenchmark');
-                    if (statusEl) {
-                        if (isUserDefined) {
-                            statusEl.innerHTML = `当前：<b>用户自定义</b> (${currentHeadBenchmark.length}家)`;
-                        } else {
-                            statusEl.innerHTML = `当前：<b>系统默认</b> (${currentHeadBenchmark.length}家)`;
-                        }
-                    }
-                })
-                .catch(() => {});
-        }
-
-        // 打开配置弹窗
-        function openHeadBenchmarkModal() {
-            const modal = document.getElementById('headBenchmarkModal');
-            const list = document.getElementById('headBenchmarkList');
-            
-            if (!allCompanies.length) {
-                alert('正在加载公司列表...');
-                loadHeadBenchmark();
-                return;
-            }
-            
-            list.innerHTML = allCompanies.map(c => `
-                <label style="display:flex;align-items:center;padding:8px;cursor:pointer;border-radius:6px;transition:background 0.2s;" onmouseover="this.style.background='#f5f5f5'" onmouseout="this.style.background='transparent'">
-                    <input type="checkbox" value="${c.name}" ${currentHeadBenchmark.includes(c.name) ? 'checked' : ''} 
-                        style="margin-right:10px;width:18px;height:18px;cursor:pointer;">
-                    <span style="font-size:14px;">${c.display_name || c.name}</span>
-                </label>
-            `).join('');
-            
-            modal.style.display = 'flex';
-        }
-
-        // 关闭弹窗
-        function closeHeadBenchmarkModal() {
-            document.getElementById('headBenchmarkModal').style.display = 'none';
-        }
-
-        // 保存配置
-        function saveHeadBenchmark() {
-            const checkboxes = document.querySelectorAll('#headBenchmarkList input[type="checkbox"]:checked');
-            const selected = Array.from(checkboxes).map(cb => cb.value);
-            
-            if (selected.length === 0) {
-                alert('请至少选择一家公司作为头部标杆');
-                return;
-            }
-            
-            if (selected.length > 15) {
-                alert('头部标杆公司数量不能超过15家');
-                return;
-            }
-            
-            fetch('/api/head-benchmark', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({companies: selected})
-            })
-            .then(r => r.json())
-            .then(data => {
-                if (data.success) {
-                    currentHeadBenchmark = selected;
-                    document.getElementById('currentHeadBenchmark').innerHTML = 
-                        `当前：<b>用户自定义</b> (${selected.length}家)`;
-                    closeHeadBenchmarkModal();
-                    alert('头部标杆配置已保存！综合排名将按新配置排序。');
-                } else {
-                    alert('保存失败：' + (data.error || '未知错误'));
-                }
-            })
-            .catch(() => alert('保存失败，请检查网络连接'));
-        }
-
-        // 重置为系统默认
-        function resetHeadBenchmark() {
-            if (!confirm('确定要重置为系统默认的头部标杆配置吗？')) return;
-            
-            fetch('/api/head-benchmark', {method: 'DELETE'})
-                .then(r => r.json())
-                .then(data => {
-                    if (data.success) {
-                        loadHeadBenchmark();
-                        closeHeadBenchmarkModal();
-                        alert('已重置为系统默认配置！');
-                    }
-                })
-                .catch(() => alert('重置失败'));
-        }
-
-        // 页面加载时获取当前配置
+        // 页面加载时获取关键指标
         document.addEventListener('DOMContentLoaded', function() {
-            loadHeadBenchmark();
-            loadDimensions();
+            loadKeyMetrics();
         });
-
-        // ============ 维度与权重配置功能 ============
-        let currentDimensionsConfig = null;
-        const defaultDimensions = {
-            'd1_strategy': {'name': '科技战略定位', 'weight': 0.10, 'enabled': true, 'is_reference': true},
-            'd2_resource': {'name': '资源投入与配置', 'weight': 0.20, 'enabled': true, 'is_reference': false},
-            'd3_org': {'name': '组织架构与人才培养', 'weight': 0.15, 'enabled': true, 'is_reference': false},
-            'd4_infra': {'name': '基础设施架构', 'weight': 0.10, 'enabled': true, 'is_reference': false},
-            'd5_xc': {'name': '信创转型', 'weight': 0.10, 'enabled': true, 'is_reference': false},
-            'd6_tech': {'name': '高新技术应用', 'weight': 0.15, 'enabled': true, 'is_reference': false},
-            'd7_system': {'name': '业务应用系统建设', 'weight': 0.10, 'enabled': true, 'is_reference': false},
-            'd8_data': {'name': '数据治理与安全', 'weight': 0.10, 'enabled': true, 'is_reference': false},
-        };
-
-        // 加载维度配置
-        function loadDimensions() {
-            fetch('/api/dimensions')
-                .then(r => r.json())
-                .then(data => {
-                    currentDimensionsConfig = data.dimensions || defaultDimensions;
-                    const isUserDefined = data.is_user_defined;
-                    
-                    // 更新侧边栏显示
-                    const statusEl = document.getElementById('currentDimensions');
-                    if (statusEl) {
-                        const enabledCount = Object.values(currentDimensionsConfig).filter(d => d.enabled && !d.is_reference).length;
-                        if (isUserDefined) {
-                            statusEl.innerHTML = `当前：<b>用户自定义</b> (${enabledCount}个排名维度)`;
-                        } else {
-                            statusEl.innerHTML = `当前：<b>默认配置</b> (8维度)`;
-                        }
-                    }
-                })
-                .catch(() => {});
-        }
-
-        // 打开维度配置弹窗
-        function openDimensionsModal() {
-            const modal = document.getElementById('dimensionsModal');
-            const list = document.getElementById('dimensionsList');
-            
-            if (!currentDimensionsConfig) {
-                currentDimensionsConfig = JSON.parse(JSON.stringify(defaultDimensions));
-            }
-            
-            renderDimensionsList();
-            modal.style.display = 'flex';
-        }
-
-        // 渲染维度列表
-        function renderDimensionsList() {
-            const list = document.getElementById('dimensionsList');
-            const dimKeys = ['d1_strategy', 'd2_resource', 'd3_org', 'd4_infra', 'd5_xc', 'd6_tech', 'd7_system', 'd8_data'];
-            
-            let html = '';
-            let totalWeight = 0;
-            
-            dimKeys.forEach(key => {
-                const dim = currentDimensionsConfig[key];
-                const isReference = dim.is_reference;
-                totalWeight += (dim.enabled && !isReference) ? dim.weight : 0;
-                
-                html += `
-                    <div style="padding:15px;border:1px solid #e0e0e0;border-radius:8px;margin-bottom:10px;background:${isReference ? '#f8f9fa' : 'white'};">
-                        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
-                            <label style="display:flex;align-items:center;cursor:pointer;">
-                                <input type="checkbox" ${dim.enabled ? 'checked' : ''} 
-                                    onchange="toggleDimension('${key}', this.checked)"
-                                    style="margin-right:10px;width:18px;height:18px;"
-                                    ${isReference ? '' : ''}>
-                                <span style="font-weight:600;font-size:15px;">${dim.name}</span>
-                                ${isReference ? '<span style="margin-left:8px;font-size:12px;color:#666;background:#e0e0e0;padding:2px 6px;border-radius:4px;">参考维度</span>' : ''}
-                            </label>
-                        </div>
-                        <div style="display:flex;align-items:center;gap:10px;">
-                            <span style="font-size:13px;color:#666;min-width:40px;">权重:</span>
-                            <input type="range" min="0" max="50" value="${Math.round(dim.weight * 100)}" 
-                                oninput="updateDimensionWeight('${key}', this.value)"
-                                style="flex:1;" ${!dim.enabled ? 'disabled' : ''}>
-                            <span style="font-size:14px;font-weight:600;min-width:50px;text-align:right;" id="weight-${key}">${Math.round(dim.weight * 100)}%</span>
-                        </div>
-                    </div>
-                `;
-            });
-            
-            list.innerHTML = html;
-            updateTotalWeight();
-        }
-
-        // 切换维度启用状态
-        function toggleDimension(key, enabled) {
-            currentDimensionsConfig[key].enabled = enabled;
-            renderDimensionsList();
-        }
-
-        // 更新维度权重
-        function updateDimensionWeight(key, value) {
-            currentDimensionsConfig[key].weight = parseInt(value) / 100;
-            document.getElementById(`weight-${key}`).textContent = value + '%';
-            updateTotalWeight();
-        }
-
-        // 更新总权重显示
-        function updateTotalWeight() {
-            let total = 0;
-            Object.values(currentDimensionsConfig).forEach(dim => {
-                if (dim.enabled && !dim.is_reference) {
-                    total += dim.weight;
-                }
-            });
-            
-            const totalEl = document.getElementById('totalWeight');
-            if (totalEl) {
-                totalEl.textContent = `排名维度权重总和: ${Math.round(total * 100)}%`;
-                totalEl.style.color = Math.abs(total - 1.0) < 0.001 ? '#28a745' : '#dc3545';
-            }
-        }
-
-        // 关闭维度配置弹窗
-        function closeDimensionsModal() {
-            document.getElementById('dimensionsModal').style.display = 'none';
-        }
-
-        // 保存维度配置
-        function saveDimensions() {
-            // 验证权重总和
-            let totalWeight = 0;
-            const enabledDims = Object.values(currentDimensionsConfig).filter(d => d.enabled && !d.is_reference);
-            enabledDims.forEach(d => totalWeight += d.weight);
-            
-            if (Math.abs(totalWeight - 1.0) > 0.001) {
-                alert(`排名维度权重总和必须等于100%，当前为${Math.round(totalWeight * 100)}%`);
-                return;
-            }
-            
-            if (enabledDims.length === 0) {
-                alert('至少需要启用一个非参考维度');
-                return;
-            }
-            
-            fetch('/api/dimensions', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({dimensions: currentDimensionsConfig})
-            })
-            .then(r => r.json())
-            .then(data => {
-                if (data.success) {
-                    const enabledCount = Object.values(currentDimensionsConfig).filter(d => d.enabled && !d.is_reference).length;
-                    document.getElementById('currentDimensions').innerHTML = 
-                        `当前：<b>用户自定义</b> (${enabledCount}个排名维度)`;
-                    closeDimensionsModal();
-                    alert('维度权重配置已保存！综合排名将按新配置计算。');
-                } else {
-                    alert('保存失败：' + (data.error || '未知错误'));
-                }
-            })
-            .catch(() => alert('保存失败，请检查网络连接'));
-        }
-
-        // 重置维度配置
-        function resetDimensions() {
-            if (!confirm('确定要重置为默认维度配置吗？')) return;
-            
-            fetch('/api/dimensions', {method: 'DELETE'})
-                .then(r => r.json())
-                .then(data => {
-                    if (data.success) {
-                        currentDimensionsConfig = JSON.parse(JSON.stringify(defaultDimensions));
-                        loadDimensions();
-                        closeDimensionsModal();
-                        alert('已重置为默认维度配置！');
-                    }
-                })
-                .catch(() => alert('重置失败'));
-        }
 
         // ============ 原始数据查看功能 ============
         let rawDataCache = null;
 
-        // 打开原始数据查看弹窗
         function openRawDataModal() {
             const modal = document.getElementById('rawDataModal');
             const content = document.getElementById('rawDataContent');
@@ -1297,7 +1122,6 @@
             content.innerHTML = '<div style="text-align:center;padding:40px;">📊 正在加载原始数据...</div>';
             modal.style.display = 'flex';
             
-            // 加载原始数据
             fetch('/api/raw-data')
                 .then(r => r.json())
                 .then(data => {
@@ -1313,12 +1137,10 @@
                 });
         }
 
-        // 渲染原始数据表格
         function renderRawDataTable(data) {
             const content = document.getElementById('rawDataContent');
             const searchTerm = document.getElementById('rawDataSearch')?.value?.toLowerCase() || '';
             
-            // 过滤行
             let rows = data.rows;
             if (searchTerm) {
                 rows = rows.filter(row => 
@@ -1326,7 +1148,6 @@
                 );
             }
             
-            // 构建表格HTML
             let html = `
                 <div style="margin-bottom:15px;padding:10px;background:#f8f9fa;border-radius:8px;">
                     <b>数据概览：</b>共 ${data.total_companies} 家公司，${data.total_fields} 个字段
@@ -1357,20 +1178,17 @@
             content.innerHTML = html;
         }
 
-        // 搜索原始数据
         function searchRawData() {
             if (rawDataCache) {
                 renderRawDataTable(rawDataCache);
             }
         }
 
-        // 关闭原始数据弹窗
         function closeRawDataModal() {
             document.getElementById('rawDataModal').style.display = 'none';
             rawDataCache = null;
         }
 
-        // 导出原始数据为CSV
         function exportRawData() {
             if (!rawDataCache) return;
             
@@ -1390,18 +1208,13 @@
         let allFieldsCache = null;
         let allCompaniesCache = null;
 
-        // 打开字段查询弹窗
         function openFieldQueryModal() {
             const modal = document.getElementById('fieldQueryModal');
             modal.style.display = 'flex';
-            
-            // 加载公司和字段列表
             loadCompaniesAndFields();
         }
 
-        // 加载公司和字段列表
         function loadCompaniesAndFields() {
-            // 加载字段列表
             if (!allFieldsCache) {
                 fetch('/api/fields')
                     .then(r => r.json())
@@ -1416,13 +1229,14 @@
                 renderFieldSelect();
             }
             
-            // 加载公司列表
             if (!allCompaniesCache) {
-                fetch('/api/head-benchmark')
+                fetch('/api/companies')
                     .then(r => r.json())
                     .then(data => {
-                        allCompaniesCache = data.all_companies;
-                        renderCompanySelect();
+                        if (data.success) {
+                            allCompaniesCache = data.companies;
+                            renderCompanySelect();
+                        }
                     })
                     .catch(() => {});
             } else {
@@ -1430,33 +1244,35 @@
             }
         }
 
-        // 渲染公司选择下拉框
         function renderCompanySelect() {
             const select = document.getElementById('fieldQueryCompany');
-            select.innerHTML = '<option value="">请选择公司</option>' +
-                allCompaniesCache.map(c => `<option value="${c.name}">${c.display_name}</option>`).join('');
+            if (select && allCompaniesCache) {
+                select.innerHTML = '<option value="">请选择公司</option>' +
+                    allCompaniesCache.map(c => `<option value="${c}">${c}</option>`).join('');
+            }
         }
 
-        // 渲染字段选择下拉框
         function renderFieldSelect() {
             const select = document.getElementById('fieldQueryField');
             const searchTerm = document.getElementById('fieldSearchInput')?.value?.toLowerCase() || '';
             
-            let fields = allFieldsCache;
+            let fields = allFieldsCache || [];
             if (searchTerm) {
                 fields = fields.filter(f => f.name.toLowerCase().includes(searchTerm));
             }
             
-            select.innerHTML = '<option value="">请选择字段</option>' +
-                fields.slice(0, 100).map(f => `<option value="${f.name}">${f.name}</option>`).join('');
+            if (select) {
+                // 限制显示数量，避免下拉列表过长
+                const displayFields = fields.slice(0, 50);
+                select.innerHTML = '<option value="">请选择字段</option>' +
+                    displayFields.map(f => `<option value="${f.name}">${f.name}</option>`).join('');
+            }
         }
 
-        // 搜索字段
         function searchFields() {
             renderFieldSelect();
         }
 
-        // 执行字段查询
         function executeFieldQuery() {
             const company = document.getElementById('fieldQueryCompany').value;
             const field = document.getElementById('fieldQueryField').value;
@@ -1503,13 +1319,11 @@
                 });
         }
 
-        // 关闭字段查询弹窗
         function closeFieldQueryModal() {
             document.getElementById('fieldQueryModal').style.display = 'none';
             document.getElementById('fieldQueryResult').innerHTML = '';
         }
 
-        // 发送查询到聊天
         function sendQueryToChat() {
             const company = document.getElementById('fieldQueryCompany').value;
             const field = document.getElementById('fieldQueryField').value;
@@ -1520,49 +1334,6 @@
             }
         }
     </script>
-
-    <!-- 头部标杆配置弹窗 -->
-    <div id="headBenchmarkModal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:1000;align-items:center;justify-content:center;">
-        <div style="background:white;width:90%;max-width:500px;max-height:80vh;border-radius:12px;box-shadow:0 4px 20px rgba(0,0,0,0.3);display:flex;flex-direction:column;">
-            <div style="padding:20px;border-bottom:1px solid #e0e0e0;display:flex;justify-content:space-between;align-items:center;">
-                <h3 style="margin:0;font-size:18px;">🏆 配置头部标杆公司</h3>
-                <button onclick="closeHeadBenchmarkModal()" style="background:none;border:none;font-size:24px;cursor:pointer;color:#666;">&times;</button>
-            </div>
-            <div style="padding:15px 20px;background:#f8f9fa;font-size:13px;color:#666;">
-                选择作为综合排名优先排序的头部标杆公司（建议10家，最多15家）
-            </div>
-            <div id="headBenchmarkList" style="flex:1;overflow-y:auto;padding:15px 20px;display:grid;grid-template-columns:repeat(2,1fr);gap:5px;">
-                <!-- 公司列表将在这里动态生成 -->
-            </div>
-            <div style="padding:20px;border-top:1px solid #e0e0e0;display:flex;gap:10px;justify-content:flex-end;">
-                <button onclick="resetHeadBenchmark()" style="padding:10px 20px;background:#f5f5f5;color:#666;border:none;border-radius:6px;cursor:pointer;font-size:14px;">重置为默认</button>
-                <button onclick="closeHeadBenchmarkModal()" style="padding:10px 20px;background:#e0e0e0;color:#333;border:none;border-radius:6px;cursor:pointer;font-size:14px;">取消</button>
-                <button onclick="saveHeadBenchmark()" style="padding:10px 20px;background:var(--primary);color:white;border:none;border-radius:6px;cursor:pointer;font-size:14px;">保存配置</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- 维度与权重配置弹窗 -->
-    <div id="dimensionsModal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:1000;align-items:center;justify-content:center;">
-        <div style="background:white;width:90%;max-width:500px;max-height:85vh;border-radius:12px;box-shadow:0 4px 20px rgba(0,0,0,0.3);display:flex;flex-direction:column;">
-            <div style="padding:20px;border-bottom:1px solid #e0e0e0;display:flex;justify-content:space-between;align-items:center;">
-                <h3 style="margin:0;font-size:18px;">⚖️ 配置维度与权重</h3>
-                <button onclick="closeDimensionsModal()" style="background:none;border:none;font-size:24px;cursor:pointer;color:#666;">&times;</button>
-            </div>
-            <div style="padding:15px 20px;background:#f8f9fa;font-size:13px;color:#666;">
-                勾选要纳入排名的维度，调整权重（参考维度仅展示不计入排名）
-                <div id="totalWeight" style="margin-top:8px;font-weight:600;font-size:14px;">排名维度权重总和: 100%</div>
-            </div>
-            <div id="dimensionsList" style="flex:1;overflow-y:auto;padding:15px 20px;">
-                <!-- 维度列表将在这里动态生成 -->
-            </div>
-            <div style="padding:20px;border-top:1px solid #e0e0e0;display:flex;gap:10px;justify-content:flex-end;">
-                <button onclick="resetDimensions()" style="padding:10px 20px;background:#f5f5f5;color:#666;border:none;border-radius:6px;cursor:pointer;font-size:14px;">重置为默认</button>
-                <button onclick="closeDimensionsModal()" style="padding:10px 20px;background:#e0e0e0;color:#333;border:none;border-radius:6px;cursor:pointer;font-size:14px;">取消</button>
-                <button onclick="saveDimensions()" style="padding:10px 20px;background:#28a745;color:white;border:none;border-radius:6px;cursor:pointer;font-size:14px;">保存配置</button>
-            </div>
-        </div>
-    </div>
 
     <!-- 原始数据查看弹窗 -->
     <div id="rawDataModal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:1000;align-items:center;justify-content:center;">
@@ -1579,7 +1350,6 @@
                 <button onclick="exportRawData()" style="padding:10px 20px;background:#28a745;color:white;border:none;border-radius:6px;cursor:pointer;">📥 导出CSV</button>
             </div>
             <div id="rawDataContent" style="flex:1;overflow:auto;padding:20px;">
-                <!-- 原始数据表格将在这里显示 -->
             </div>
             <div style="padding:15px 20px;border-top:1px solid #e0e0e0;background:#f8f9fa;font-size:12px;color:#666;">
                 💡 提示：表格可横向滚动查看所有字段，点击"导出CSV"可下载完整数据
@@ -1609,16 +1379,15 @@
                 </div>
                 <div style="margin-bottom:15px;">
                     <label style="display:block;margin-bottom:8px;font-weight:600;">选择字段</label>
-                    <select id="fieldQueryField" style="width:100%;padding:10px;border:1px solid #ddd;border-radius:6px;font-size:14px;max-height:150px;" size="5">
+                    <select id="fieldQueryField" style="width:100%;padding:10px;border:1px solid #ddd;border-radius:6px;font-size:14px;background:white;">
                         <option value="">请选择字段</option>
                     </select>
-                    <p style="font-size:12px;color:#666;margin-top:5px;">提示：先输入关键词搜索，然后从列表中选择</p>
+                    <p style="font-size:12px;color:#666;margin-top:5px;">提示：先输入关键词搜索，然后从下拉列表中选择</p>
                 </div>
                 <button onclick="executeFieldQuery()" style="width:100%;padding:12px;background:#17a2b8;color:white;border:none;border-radius:6px;cursor:pointer;font-size:16px;font-weight:600;">
                     🔍 查询
                 </button>
                 <div id="fieldQueryResult" style="margin-top:20px;">
-                    <!-- 查询结果将在这里显示 -->
                 </div>
             </div>
             <div style="padding:15px 20px;border-top:1px solid #e0e0e0;background:#f8f9fa;display:flex;gap:10px;justify-content:flex-end;">
