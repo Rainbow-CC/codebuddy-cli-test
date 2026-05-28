@@ -4,6 +4,11 @@
 """
 import os
 import sys
+
+# 从环境变量获取API Key，如果没有则使用默认值（仅用于开发测试）
+# 生产环境必须设置环境变量 OPENAI_API_KEY
+os.environ.setdefault("OPENAI_API_KEY", os.getenv("OPENAI_API_KEY", ""))
+
 import asyncio
 import json
 import re
@@ -28,6 +33,9 @@ from agent import (
     get_suggestions
 )
 
+# 导入智能卡片API蓝图
+from app_smart_cards import register_smart_cards_blueprint
+
 # 配置日志
 logging.basicConfig(
     level=logging.INFO,
@@ -38,6 +46,9 @@ logging.basicConfig(
 # 创建Flask应用
 static_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'static')
 app = Flask(__name__, static_folder=static_dir, static_url_path='')
+
+# 注册智能卡片API蓝图
+register_smart_cards_blueprint(app)
 
 # CORS配置
 cors_origins = [
@@ -88,7 +99,10 @@ def chat_agent():
     
     try:
         response = asyncio.run(get_agent_response(query, thread_id))
-        return jsonify({'result': response, 'charts': []})
+        return jsonify({
+            'result': response.get('content', ''), 
+            'charts': response.get('charts', [])
+        })
     except Exception as e:
         logging.error(f"Agent响应错误: {e}")
         return jsonify({'error': str(e)}), 500
@@ -115,7 +129,7 @@ def chat_agent_stream():
                 try:
                     chunk = loop.run_until_complete(gen.__anext__())
                     if chunk:
-                        yield f"data: {json.dumps({'content': chunk})}\n\n"
+                        yield f"data: {json.dumps(chunk)}\n\n"
                 except StopAsyncIteration:
                     break
                 except Exception as e:
