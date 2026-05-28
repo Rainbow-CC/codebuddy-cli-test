@@ -7,6 +7,7 @@ from flask import Blueprint, request, jsonify, Response, stream_with_context
 import asyncio
 import json
 import re
+import time
 
 # 导入智能卡片管理器
 from smart_card_manager import get_card_manager
@@ -30,6 +31,12 @@ def _is_safe_id(value):
 def _validate_text(value, max_len):
     value = str(value or "").strip()
     return value[:max_len]
+
+
+def _normalize_agent_response(response):
+    if isinstance(response, dict):
+        return response.get('content', ''), response.get('charts', []) or []
+    return str(response or ''), []
 
 
 # ========== 卡片配置API ==========
@@ -178,19 +185,20 @@ def analyze_card(card_id):
     # 调用Agent生成响应
     try:
         response = asyncio.run(get_agent_response(query, f"card_{card_id}"))
+        content, charts = _normalize_agent_response(response)
         
         # 缓存响应
         card_manager.cache_response(
             query=query,
-            result=response,
-            charts=[],
+            result=content,
+            charts=charts,
             card_id=card_id
         )
         
         return jsonify({
             'success': True,
-            'result': response,
-            'charts': [],
+            'result': content,
+            'charts': charts,
             'cached': False,
             'card_id': card_id,
             'card_title': card['title']
@@ -228,8 +236,14 @@ def analyze_card_stream(card_id):
         cached = card_manager.get_cached_response(query, card_id)
         if cached:
             def generate_cached():
-                yield f"data: {json.dumps({'content': cached['result'], 'cached': True, 'success': True, 'card_id': card_id, 'card_title': card['title']})}\n\n"
-            return Response(stream_with_context(generate_cached()), mimetype='text/event-stream')
+                result = str(cached.get('result') or '')
+                for i in range(0, len(result), 80):
+                    yield f"data: {json.dumps({'content': result[i:i+80], 'cached': True, 'success': True, 'card_id': card_id, 'card_title': card['title']})}\n\n"
+                    time.sleep(0.02)
+                charts = cached.get('charts') or []
+                if charts:
+                    yield f"data: {json.dumps({'charts': charts, 'cached': True, 'success': True, 'card_id': card_id, 'card_title': card['title']})}\n\n"
+            return Response(stream_with_context(generate_cached()), mimetype='text/event-stream', headers={'Cache-Control': 'no-cache', 'X-Accel-Buffering': 'no'})
     
     # 调用Agent流式生成响应并缓存
     def generate_stream():
@@ -237,13 +251,23 @@ def analyze_card_stream(card_id):
         asyncio.set_event_loop(loop)
         gen = get_agent_streaming_response(query, f"card_{card_id}")
         full_response = []
+        charts = []
         try:
             while True:
                 try:
                     chunk = loop.run_until_complete(gen.__anext__())
                     if chunk:
-                        full_response.append(chunk)
-                        yield f"data: {json.dumps({'content': chunk, 'cached': False, 'success': True, 'card_id': card_id, 'card_title': card['title']})}\n\n"
+                        if isinstance(chunk, dict):
+                            chart = chunk.get('chart')
+                            if chart:
+                                charts.append(chart)
+                            chunk_charts = chunk.get('charts')
+                            if isinstance(chunk_charts, list):
+                                charts.extend([item for item in chunk_charts if item])
+                            yield f"data: {json.dumps({**chunk, 'cached': False, 'success': True, 'card_id': card_id, 'card_title': card['title']})}\n\n"
+                        else:
+                            full_response.append(chunk)
+                            yield f"data: {json.dumps({'content': chunk, 'cached': False, 'success': True, 'card_id': card_id, 'card_title': card['title']})}\n\n"
                 except StopAsyncIteration:
                     # 成功结束时保存到缓存
                     full_content = "".join(full_response)
@@ -251,7 +275,7 @@ def analyze_card_stream(card_id):
                         card_manager.cache_response(
                             query=query,
                             result=full_content,
-                            charts=[],
+                            charts=charts,
                             card_id=card_id
                         )
                     break
@@ -261,7 +285,7 @@ def analyze_card_stream(card_id):
         finally:
             loop.close()
 
-    return Response(stream_with_context(generate_stream()), mimetype='text/event-stream')
+    return Response(stream_with_context(generate_stream()), mimetype='text/event-stream', headers={'Cache-Control': 'no-cache', 'X-Accel-Buffering': 'no'})
 
 
 @smart_cards_bp.route('/cards/<card_id>/regenerate', methods=['POST'])
@@ -321,19 +345,20 @@ def analyze_quick_question(question_id):
     # 调用Agent
     try:
         response = asyncio.run(get_agent_response(query, f"qq_{question_id}"))
+        content, charts = _normalize_agent_response(response)
         
         # 缓存
         card_manager.cache_response(
             query=query,
-            result=response,
-            charts=[],
+            result=content,
+            charts=charts,
             card_id=question_id
         )
         
         return jsonify({
             'success': True,
-            'result': response,
-            'charts': [],
+            'result': content,
+            'charts': charts,
             'cached': False,
             'question_id': question_id
         })
@@ -365,8 +390,14 @@ def analyze_quick_question_stream(question_id):
     cached = card_manager.get_cached_response(query, question_id)
     if cached:
         def generate_cached():
-            yield f"data: {json.dumps({'content': cached['result'], 'cached': True, 'success': True, 'question_id': question_id})}\n\n"
-        return Response(stream_with_context(generate_cached()), mimetype='text/event-stream')
+            result = str(cached.get('result') or '')
+            for i in range(0, len(result), 80):
+                yield f"data: {json.dumps({'content': result[i:i+80], 'cached': True, 'success': True, 'question_id': question_id})}\n\n"
+                time.sleep(0.02)
+            charts = cached.get('charts') or []
+            if charts:
+                yield f"data: {json.dumps({'charts': charts, 'cached': True, 'success': True, 'question_id': question_id})}\n\n"
+        return Response(stream_with_context(generate_cached()), mimetype='text/event-stream', headers={'Cache-Control': 'no-cache', 'X-Accel-Buffering': 'no'})
     
     # 调用Agent流式生成响应并缓存
     def generate_stream():
@@ -374,13 +405,23 @@ def analyze_quick_question_stream(question_id):
         asyncio.set_event_loop(loop)
         gen = get_agent_streaming_response(query, f"qq_{question_id}")
         full_response = []
+        charts = []
         try:
             while True:
                 try:
                     chunk = loop.run_until_complete(gen.__anext__())
                     if chunk:
-                        full_response.append(chunk)
-                        yield f"data: {json.dumps({'content': chunk, 'cached': False, 'success': True, 'question_id': question_id})}\n\n"
+                        if isinstance(chunk, dict):
+                            chart = chunk.get('chart')
+                            if chart:
+                                charts.append(chart)
+                            chunk_charts = chunk.get('charts')
+                            if isinstance(chunk_charts, list):
+                                charts.extend([item for item in chunk_charts if item])
+                            yield f"data: {json.dumps({**chunk, 'cached': False, 'success': True, 'question_id': question_id})}\n\n"
+                        else:
+                            full_response.append(chunk)
+                            yield f"data: {json.dumps({'content': chunk, 'cached': False, 'success': True, 'question_id': question_id})}\n\n"
                 except StopAsyncIteration:
                     # 成功结束时保存到缓存
                     full_content = "".join(full_response)
@@ -388,7 +429,7 @@ def analyze_quick_question_stream(question_id):
                         card_manager.cache_response(
                             query=query,
                             result=full_content,
-                            charts=[],
+                            charts=charts,
                             card_id=question_id
                         )
                     break
@@ -398,7 +439,7 @@ def analyze_quick_question_stream(question_id):
         finally:
             loop.close()
 
-    return Response(stream_with_context(generate_stream()), mimetype='text/event-stream')
+    return Response(stream_with_context(generate_stream()), mimetype='text/event-stream', headers={'Cache-Control': 'no-cache', 'X-Accel-Buffering': 'no'})
 
 
 # ========== 缓存管理API ==========
@@ -456,12 +497,13 @@ def init_cards_cache():
             
             # 调用Agent
             response = asyncio.run(get_agent_response(query, f"card_{card_id}"))
+            content, charts = _normalize_agent_response(response)
             
             # 缓存
             card_manager.cache_response(
                 query=query,
-                result=response,
-                charts=[],
+                result=content,
+                charts=charts,
                 card_id=card_id
             )
             

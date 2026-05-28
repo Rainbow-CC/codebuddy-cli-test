@@ -1,6 +1,6 @@
 # Trust Survey SQL Expert
 
-本 Skill 旨在指导 Agent 通过 SQLite 数据库 `trust_survey.db` 获取中国信托业（65家公司）的科技建设统计数据。
+本 Skill 旨在指导 Agent 通过 SQLite 数据库 `trust_survey.db` 获取中国信托业（61家公司）的科技建设统计数据。
 
 ## 核心资源
 

@@ -4,6 +4,7 @@
 用于管理预制卡片和自定义卡片的智能分析缓存
 """
 import json
+import ast
 import os
 import hashlib
 import sqlite3
@@ -397,12 +398,21 @@ class SmartCardManager:
                 )
                 row = cursor.fetchone()
                 if row:
+                    result = row[0]
                     try:
                         charts = json.loads(row[1]) if row[1] else []
                     except Exception:
                         charts = []
+                    if isinstance(result, str) and result.strip().startswith("{"):
+                        try:
+                            parsed_result = ast.literal_eval(result)
+                            if isinstance(parsed_result, dict):
+                                result = parsed_result.get("content", result)
+                                charts = parsed_result.get("charts", charts) or charts
+                        except Exception:
+                            pass
                     return {
-                        "result": row[0],
+                        "result": result,
                         "charts": charts,
                         "cached": True,
                         "cached_at": row[2],
@@ -416,6 +426,10 @@ class SmartCardManager:
                       card_id: Optional[str] = None):
         """将响应缓存到 SQLite 数据库"""
         cache_key = self._generate_cache_key(query, card_id)
+        if isinstance(result, dict):
+            charts = result.get("charts", charts) or charts
+            result = result.get("content", "")
+        result = str(result or "")
         charts_str = json.dumps(charts or [])
         cached_at = datetime.now().isoformat()
         try:
@@ -513,18 +527,24 @@ class SmartCardManager:
             import asyncio
             generated = agent_func(card["query"])
             result = asyncio.run(generated) if hasattr(generated, "__await__") else generated
+            if isinstance(result, dict):
+                content = result.get("content", "")
+                charts = result.get("charts", []) or []
+            else:
+                content = str(result or "")
+                charts = []
             
             # 缓存新响应
             self.cache_response(
                 query=card["query"],
-                result=result,
-                charts=[],  # 图表由前端生成
+                result=content,
+                charts=charts,
                 card_id=card_id
             )
             
             return {
-                "result": result,
-                "charts": [],
+                "result": content,
+                "charts": charts,
                 "cached": False,
                 "card_id": card_id
             }
